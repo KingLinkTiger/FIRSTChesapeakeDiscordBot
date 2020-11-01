@@ -1,5 +1,5 @@
 # FIRSTChesapeakeBot
-Docker image to run the [First Chesapeake](https://www.firstchesapeake.org/) [Discord](https://discord.com/) Bot.
+Docker image to run the [FIRST Chesapeake](https://www.firstchesapeake.org/) [Discord](https://discord.com/) Bot.
 
 ## INTRODUCTION
 This is a Docker Image of a Discord Bot for the FIRST Chesapeake Discord Server.
