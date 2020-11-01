@@ -1,9 +1,9 @@
+# BUILD ENV
+FROM python:3.8-slim-buster
+
 LABEL version="1.0"
 LABEL description="Docker image of the FIRST Chesapeake Discord Bot."
 LABEL maintainer="kinglinktiger@gmail.com"
-
-# BUILD ENV
-FROM python:3.8-slim-buster
 
 # Set WORKDIR
 WORKDIR /code
