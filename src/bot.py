@@ -54,8 +54,10 @@ FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
 
 
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='!', case_insensitive=True, intents=intents)
 
-bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
 events = {}
 
@@ -300,14 +302,13 @@ async def on_ready():
     # Get the Channel IDs for the channels we need
     findChannels()
     
+
 @bot.event
-async def on_member_join(ctx):
-    #When a new member joins the server assign them the Needs Registration Role
-    #Code from https://stackoverflow.com/questions/55478282/discord-py-add-role-to-user
-    logger.info(ctx.message.author.display_name + " has joined the server! Adding member to the " + ROLE_NEWUSER + " role.")
-    member = ctx.message.author
-    role = discord.utils.get(member.server.roles, name=ROLE_NEWUSER)
-    await bot.add_roles(member, role)
+async def on_member_join(member):
+    logger.info(member.display_name + " has joined the server! Adding member to the " + ROLE_NEWUSER + " role.")
+    # Help from https://stackoverflow.com/questions/59052536/attributeerror-bot-object-has-no-attribute-add-roles
+    role = discord.utils.get(member.guild.roles, name=ROLE_NEWUSER)
+    await member.add_roles(role)
 
 
 # ===== END BOT EVENT SECTION ===== 
