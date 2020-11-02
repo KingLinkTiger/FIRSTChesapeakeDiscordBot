@@ -51,6 +51,9 @@ BOTPRODUCTIONCHANNEL_ID = None
 
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
+ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
+
+
 
 bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
@@ -275,10 +278,8 @@ async def server(ctx, verb: str, noun: str):
 #only those with the permission to manage messages can use this command
 async def clear(ctx, amount: int):
     logger.warning(ctx.message.author.display_name + " has requested the removal of " + str(amount + 1) + " messages from channel " + ctx.message.channel.name)
-    #The check_func is from https://stackoverflow.com/questions/62224912/is-there-a-way-to-do-a-check-for-pinned-messages-and-only-purge-a-certain-membe
-    #check_func = lambda msg: not msg.pinned
     
-    #New check from https://stackoverflow.com/questions/53643906/discord-py-delete-all-messages-except-pin-messages
+    # Check from https://stackoverflow.com/questions/53643906/discord-py-delete-all-messages-except-pin-messages
     await ctx.channel.purge(limit=amount + 1, check=lambda msg: not msg.pinned)
 
 
@@ -300,9 +301,14 @@ async def on_ready():
     findChannels()
     
 @bot.event
-async def on_member_join(member):
+async def on_member_join(ctx):
     #When a new member joins the server assign them the Needs Registration Role
-    await member.add_roles("Needs Registration", "Assigning new member the Needs Registration Role")
+    #Code from https://stackoverflow.com/questions/55478282/discord-py-add-role-to-user
+    logger.info(ctx.message.author.display_name + " has joined the server! Adding member to the " + ROLE_NEWUSER + " role.")
+    member = ctx.message.author
+    role = discord.utils.get(member.server.roles, name=ROLE_NEWUSER)
+    await bot.add_roles(member, role)
+
 
 # ===== END BOT EVENT SECTION ===== 
 
