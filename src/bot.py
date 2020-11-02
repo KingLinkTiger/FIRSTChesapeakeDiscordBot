@@ -276,8 +276,10 @@ async def server(ctx, verb: str, noun: str):
 async def clear(ctx, amount: int):
     logger.warning(ctx.message.author.display_name + " has requested the removal of " + str(amount + 1) + " messages from channel " + ctx.message.channel.name)
     #The check_func is from https://stackoverflow.com/questions/62224912/is-there-a-way-to-do-a-check-for-pinned-messages-and-only-purge-a-certain-membe
-    check_func = lambda msg: not msg.pinned
-    await ctx.channel.purge(limit=amount + 1, check=check_func)
+    #check_func = lambda msg: not msg.pinned
+    
+    #New check from https://stackoverflow.com/questions/53643906/discord-py-delete-all-messages-except-pin-messages
+    await ctx.channel.purge(limit=amount + 1, check=lambda msg: not msg.pinned)
 
 
 # ===== END COMMANDS SECTION =====
