@@ -56,9 +56,12 @@ bot = commands.Bot(command_prefix='!', case_insensitive=True)
 
 events = {}
 
+
+# ===== START COMMANDS SECTION =====
+
 @bot.command(name='ftcteamtoa')
 async def getFTCTeamDataTOA(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL:
+    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from TOA.")
             
@@ -90,7 +93,7 @@ async def getFTCTeamDataTOA(ctx, team_number: str):
   
 @bot.command(name='ftcteam')
 async def getFTCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL:
+    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
         teamNumberInt = int(team_number)
         if team_number.isnumeric() and teamNumberInt >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FTC DB.")
@@ -134,7 +137,7 @@ async def getFTCTeamData(ctx, team_number: str):
 
 @bot.command(name='frcteam')
 async def getFRCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL:
+    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 4:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FRC DB.")
             
@@ -225,13 +228,6 @@ async def event(ctx, verb: str, noun: str):
                 await ctx.send("ERROR: System is not monitoring event " + noun)
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
-        
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.errors.CommandNotFound):
-        logger.warning(ctx.message.author.display_name + " attempted to invoke an invalid command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
-        #await ctx.send('ERROR: The entered command does not exist!')
-
 
 @ftc.command()
 async def server(ctx, verb: str, noun: str):
@@ -273,6 +269,43 @@ async def server(ctx, verb: str, noun: str):
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC SERVER Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
 
+#The following code is from https://stackoverflow.com/questions/60643592/how-to-delete-all-messages-from-a-channel-with-discord-bot
+@bot.command(pass_context = True , aliases=['purge', 'clean', 'delete', 'sweep'])
+@commands.has_permissions(manage_messages=True) 
+#only those with the permission to manage messages can use this command
+async def clear(ctx, amount: int):
+    logger.warning(ctx.message.author.display_name + " has requested the removal of " + str(amount + 1) + " messages from channel " + ctx.message.channel.name)
+    #The check_func is from https://stackoverflow.com/questions/62224912/is-there-a-way-to-do-a-check-for-pinned-messages-and-only-purge-a-certain-membe
+    check_func = lambda msg: not msg.pinned
+    await ctx.channel.purge(limit=amount + 1, check=check_func)
+
+
+# ===== END COMMANDS SECTION =====
+
+# ===== START BOT EVENT SECTION ===== 
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.errors.CommandNotFound):
+        logger.warning(ctx.message.author.display_name + " attempted to invoke an invalid command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
+        #await ctx.send('ERROR: The entered command does not exist!')
+        
+@bot.event
+async def on_ready():
+    # Check if we have a valid API key
+    checkFTCEVENTSERVER_APIKey()
+    
+    # Get the Channel IDs for the channels we need
+    findChannels()
+    
+@bot.event
+async def on_member_join(member):
+    #When a new member joins the server assign them the Needs Registration Role
+    await member.add_roles("Needs Registration", "Assigning new member the Needs Registration Role")
+
+# ===== END BOT EVENT SECTION ===== 
+
+
+# ===== START FUNCTION SECTION ===== 
 def checkFTCEVENTSERVER_APIKey():
     if FTCEVENTSERVER_APIKey:
         try:
@@ -341,15 +374,8 @@ async def stopBot():
     logging.shutdown()
 
     # FIN
-    
-@bot.event
-async def on_ready():
-    # Check if we have a valid API key
-    checkFTCEVENTSERVER_APIKey()
-    
-    # Get the Channel IDs for the channels we need
-    findChannels()
-    
+# ===== END FUNCTION SECTION =====     
+
 
 # Write to the log to let us know the bot is, about to be, online and ready to go
 logger.info("Bot started and connecting to DISCORD")

@@ -30,6 +30,7 @@ Command | Description
 !ftcteamtoa <Team Number> | Retrieves information about the supplied team from the The Orange Alliance API
 !ftc event start/stop <Event Code> | *ADMIN COMMAND* Start/Stops the live event feed for the provided FTC Event Code
 !ftc server get apikey | *ADMIN COMMAND* Request an API key from the FTC Scorekeeper Software. This will output the key to Discord and log.
+!clear <amount> | *ADMIN COMMAND* Removes the specified ammount of messages in a channel, excluding pinned messages.
 
 ## CHANGES
 Date | Description
