@@ -1,4 +1,5 @@
 #TODO: On container shutdown gracefully stop everything (Logging and websockets)
+#TODO: Add Text To Speech capability for live event feed
 
 import os, os.path
 from datetime import datetime, timedelta
@@ -52,6 +53,8 @@ BOTPRODUCTIONCHANNEL_ID = None
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
 ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
+
+ROLEID_ADMINISTRATOR = os.getenv('ROLEID_ADMINISTRATOR')
 
 
 intents = discord.Intents.default()
@@ -183,7 +186,7 @@ async def ftc(ctx):
 
 @ftc.command()
 async def event(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL and "Server Administrator".lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    if ctx.message.channel.name == BOTADMINCHANNEL and ROLEID_ADMINISTRATOR in [y.id for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
@@ -236,7 +239,7 @@ async def event(ctx, verb: str, noun: str):
 
 @ftc.command()
 async def server(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL and "Server Administrator".lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    if ctx.message.channel.name == BOTADMINCHANNEL and ROLEID_ADMINISTRATOR in [y.id for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
