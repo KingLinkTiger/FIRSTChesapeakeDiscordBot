@@ -37,3 +37,4 @@ Date | Description
 ---- | ----
 1NOV20 | Initial Release (v1.0)
 2NOV20 | v1.0.1 - Added: Auto Assign new users the "Needs Registration" Role, Clear/Sweep Command, Modified bot to also listen for all commands on the Admin channel as well
+13NOV20 | v1.0.5 - Changed Admin Role check from String to ID
