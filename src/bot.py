@@ -54,7 +54,7 @@ FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
 ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
 
-ROLEID_ADMINISTRATOR = os.getenv('ROLEID_ADMINISTRATOR')
+ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR')
 
 
 intents = discord.Intents.default()
@@ -180,22 +180,13 @@ async def getFRCTeamData(ctx, team_number: str):
         logger.warning(ctx.message.author.display_name + " tried to invoke bot from " + ctx.message.channel.name + ".")
                 
 @bot.group()
-@commands.has_role(ROLEID_ADMINISTRATOR)
 async def ftc(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Invalid command passed...')
 
-@ftc.error
-async def ftcCommandError(ctx, error):
-    logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
-    logger.warning(ctx.message.author.display_name + "'s Roles: " + ctx.message.author.roles)
-    logger.warning(ctx.message.author.display_name + " is Admin: " + ctx.message.author.roles)
-    logger.warning("User does not have correct role to run command!")
-
 @ftc.command()
-@commands.has_role(ROLEID_ADMINISTRATOR)
 async def event(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL:
+    if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
@@ -245,13 +236,10 @@ async def event(ctx, verb: str, noun: str):
                 await ctx.send("ERROR: System is not monitoring event " + noun)
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
-        logger.warning(ctx.message.author.display_name + "'s Roles: " + ctx.message.author.roles)
-        logger.warning(ctx.message.author.display_name + " is Admin: " + ctx.message.author.roles)
 
 @ftc.command()
-@commands.has_role(ROLEID_ADMINISTRATOR)
 async def server(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL:
+    if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
