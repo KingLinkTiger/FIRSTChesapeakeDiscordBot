@@ -185,6 +185,13 @@ async def ftc(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Invalid command passed...')
 
+@ftc.error()
+async def ftcCommandError(ctx, error):
+    logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
+    logger.warning(ctx.message.author.display_name + "'s Roles: " + ctx.message.author.roles)
+    logger.warning(ctx.message.author.display_name + " is Admin: " + ctx.message.author.roles)
+    logger.warning("User does not have correct role to run command!")
+
 @ftc.command()
 @commands.has_role(ROLEID_ADMINISTRATOR)
 async def event(ctx, verb: str, noun: str):
