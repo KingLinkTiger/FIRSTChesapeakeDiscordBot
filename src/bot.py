@@ -185,7 +185,7 @@ async def ftc(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Invalid command passed...')
 
-@ftc.error()
+@ftc.error
 async def ftcCommandError(ctx, error):
     logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
     logger.warning(ctx.message.author.display_name + "'s Roles: " + ctx.message.author.roles)
