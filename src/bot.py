@@ -14,8 +14,11 @@ import logging
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
+from io import StringIO
+import csv
 
 from FTCEvent import FTCEvent
+from DiscordChannel import DiscordChannel
 
 #Create cache file so we don't make unnecessary calls to the APIs 
 requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(timedelta(days=3)))
@@ -44,11 +47,10 @@ FTCEVENTS_KEY = os.getenv('FTCEVENTS_KEY')
 FRCEVENTS_KEY = os.getenv('FRCEVENTS_KEY')
 FTCEVENTSERVER = os.getenv('FTCEVENTSERVER')
 
+BOTADMINCHANNELS = os.getenv('BOTADMINCHANNELS')
 
-BOTADMINCHANNEL = os.getenv('BOTADMINCHANNEL')
-BOTADMINCHANNEL_ID = None
-BOTPRODUCTIONCHANNEL = os.getenv('BOTPRODUCTIONCHANNEL')
-BOTPRODUCTIONCHANNEL_ID = None
+BOTPRODUCTIONCHANNELS = os.getenv('BOTPRODUCTIONCHANNELS')
+
 
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
@@ -69,7 +71,8 @@ events = {}
 
 @bot.command(name='ftcteamtoa')
 async def getFTCTeamDataTOA(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
+    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
+    #if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from TOA.")
             
@@ -101,7 +104,7 @@ async def getFTCTeamDataTOA(ctx, team_number: str):
   
 @bot.command(name='ftcteam')
 async def getFTCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
+    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
         teamNumberInt = int(team_number)
         if team_number.isnumeric() and teamNumberInt >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FTC DB.")
@@ -145,7 +148,7 @@ async def getFTCTeamData(ctx, team_number: str):
 
 @bot.command(name='frcteam')
 async def getFRCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
+    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 4:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FRC DB.")
             
@@ -185,9 +188,10 @@ async def ftc(ctx):
         await ctx.send('Invalid command passed...')
 
 @ftc.command()
-async def event(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
-        logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
+async def event(ctx, verb: str, noun: str): 
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.isAdmin] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    #if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
         
@@ -211,7 +215,9 @@ async def event(ctx, verb: str, noun: str):
                         responseData = json.loads(response.text)
                         
                         #Create FTCEvent instance
-                        e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
+                        logger.info("[ftc event] Attempting to make FTCEvent Instance")
+                        #e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
+                        e = FTCEvent(responseData, bot, DiscordChannel.AllDiscordChannels.copy())
                         
                         #Store instance in dict
                         events[noun] = e
@@ -239,7 +245,7 @@ async def event(ctx, verb: str, noun: str):
 
 @ftc.command()
 async def server(ctx, verb: str, noun: str):
-    if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.isAdmin] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
@@ -344,9 +350,40 @@ def checkFTCEVENTSERVER_APIKey():
         logger.error("FTC Event Server API Key is not set! Please request one, update .env file, and restart the bot.")
 
 def findChannels():
+    
+    if BOTPRODUCTIONCHANNELS == None:
+        #BOTPRODUCTIONCHANNELS is empty and needs to be handled
+        logger.error("BOTPRODUCTIONCHANNELS is not set!")
+        raise
+        
+    if BOTADMINCHANNELS == None:
+        #BOTADMINCHANNELS is empty and needs to be handled
+        logger.error("BOTADMINCHANNELS is not set!")
+        raise
+    
+    if "," in str(BOTPRODUCTIONCHANNELS):
+        f = StringIO(BOTPRODUCTIONCHANNELS)
+        channels = next(csv.reader(f, delimiter=','))
+        for channel in channels:
+            DiscordChannel(bot, bot.get_all_channels(), channel, 0)
+    else:
+      DiscordChannel(bot, bot.get_all_channels(), BOTPRODUCTIONCHANNELS, 0)  
+    
+    if "," in str(BOTADMINCHANNELS):
+        f = StringIO(BOTADMINCHANNELS)
+        channels = next(csv.reader(f, delimiter=','))
+        for channel in channels:
+            DiscordChannel(bot, bot.get_all_channels(), channel, 1)
+    else:
+        DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
+        
+    for channel in DiscordChannel.AllDiscordChannels:
+        logger.debug("[findChannels] " + channel.name)
+        
+    '''
     global BOTPRODUCTIONCHANNEL_ID
     global BOTADMINCHANNEL_ID
-    
+    #ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]
     channels = bot.get_all_channels()
     for channel in channels:       
         if channel.name.lower() == BOTPRODUCTIONCHANNEL.lower() and str(channel.type) == "text":
@@ -361,6 +398,7 @@ def findChannels():
         
     if BOTADMINCHANNEL_ID == None:
         logger.error("Unable to locate Bot Admin Channel")
+    '''
 
 async def stopWebSockets():
     #Stop the websocket for each event

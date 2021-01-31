@@ -10,7 +10,11 @@ import logging
 from discord.ext import commands
 from dotenv import load_dotenv
 
+import mysql.connector
+from mysql.connector import Error
+
 from FTCTeam import FTCTeam
+from DiscordChannel import DiscordChannel
 
 load_dotenv()
 
@@ -19,16 +23,22 @@ FTCEVENTSERVER_WEBSOCKETURL = os.getenv('FTCEVENTSERVER_WEBSOCKETURL')
 BOTPRODUCTIONCHANNEL = os.getenv('BOTPRODUCTIONCHANNEL')
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
+mySQL_USER = os.getenv('mySQL_USER')
+mySQL_PASSWORD = os.getenv('mySQL_PASSWORD')
+mySQL_HOST = os.getenv('mySQL_HOST')
+mySQL_DATABASE = os.getenv('mySQL_DATABASE')
+mySQL_TABLE = os.getenv('mySQL_TABLE')
+
+
 class FTCEvent:
     logger = logging.getLogger('FIRSTChesapeakeBot')
-
-    def __init__(self, eventData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID): 
+  
+    def __init__(self, eventData, bot, AllDiscordChannels): 
         self.eventCode = eventData["eventCode"]
         self.name = eventData["name"]
         self.bot = bot
-        self.BOTPRODUCTIONCHANNEL_ID = BOTPRODUCTIONCHANNEL_ID
-        self.BOTADMINCHANNEL_ID = BOTADMINCHANNEL_ID
-        
+        self.AllDiscordChannels = AllDiscordChannels
+   
         self.logger.info("[" + self.name + "] " + "Creating Event Instance")
         
         
@@ -37,9 +47,19 @@ class FTCEvent:
         #self.lastState = ""
         
         self.getTeams()
+        
+        self.logger.info("[" + self.name + "][mySQL] " + "Trying to connect to SQL Database")
+        try:
+            self.mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+            self.mySQLCursor = self.mySQLConnection.cursor()
+            self.logger.info("[" + self.name + "][mySQL] " + "Connected to SQL Database")
+        except mysql.connector.Error as err:
+            self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to connect to SQL Database.")
+            self.logger.error("[" + self.name + "][mySQL] " + err.msg)
+
 
         self.task = asyncio.create_task(self.startWebSocket())
-        
+
         
     def getTeams(self):
         self.logger.info("[" + self.name + "] " + "Getting teams data")
@@ -90,12 +110,10 @@ class FTCEvent:
             blue2 = matchBrief["matchBrief"]["blue"]["team2"]
             
             #Access to the Discord Client
-            channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-            await channel.send("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------------------------------------" + "\n" + "Red 1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red 2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")     
+            await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH LOADED" + "\n" + "--------------------------------------------------" + "\n" + "Red  1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red  2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")
             
     async def matchStart(self, json_data):     
-        channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-        await channel.send("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""") 
+        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""") 
         
     async def matchCommit(self, json_data):         
         if json_data["payload"]["shortName"][0] == 'Q':
@@ -107,32 +125,66 @@ class FTCEvent:
      
             matchResults = json.loads(response.text)
         
-            channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-            await channel.send("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------MATCH RESULTS------------------------------" + "\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Blue Auto: " + str(matchResults["blue"]["auto"]) + "\n" + "Blue Tele: " + str(matchResults["blue"]["teleop"]) + "\n" + "Blue End: " + str(matchResults["blue"]["end"]) + "\n" + "Blue Penalty: " + str(matchResults["blue"]["penalty"]) + "\n\n" + "Red Score: " + str(matchResults["redScore"]) + "\n" + "Red Auto: " + str(matchResults["red"]["auto"]) + "\n" + "Red Tele: " + str(matchResults["red"]["teleop"]) + "\n" + "Red End: " + str(matchResults["red"]["end"]) + "\n" + "Red Penalty: " + str(matchResults["red"]["penalty"]) + """```""")
-        
+            #Save the data to the SQL Server
+            
+            #Check if the match already exists in the DB
+            SQLStatement = "SELECT EXISTS(SELECT * FROM {table_name} WHERE `eventCode` = %s AND `matchBrief_matchNumber` = %s)".format(table_name=mySQL_TABLE)
+            SQLData = (self.eventCode, matchResults["matchBrief"]["matchNumber"])
+            
+            try:
+                self.mySQLCursor.execute(SQLStatement, SQLData)
+                result = self.mySQLCursor.fetchall()
+            except mysql.connector.Error as err:
+                self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to INSERT into the SQL Database.")
+                self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
+                self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
+            
+            #If the match has already been committed previously we must update the row already there
+            if bool(result[0][0]):
+                SQLStatement = "UPDATE {table_name} SET `eventCode`=%s,`startTime`=FROM_UNIXTIME(%s),`scheduledTime`=FROM_UNIXTIME(%s),`resultPostedTime`=FROM_UNIXTIME(%s),`redScore`=%s,`blueScore`=%s,`randomization`=%s,`matchBrief_matchState`=%s,`matchBrief_time`=FROM_UNIXTIME(%s),`matchBrief_matchName`=%s,`matchBrief_matchNumber`=%s,`matchBrief_field`=%s,`matchBrief_red_team1`=%s,`matchBrief_red_team2`=%s,`matchBrief_red_isTeam1Surrogate`=%s,`matchBrief_red_isTeam2Surrogate`=%s,`matchBrief_blue_team1`=%s,`matchBrief_blue_team2`=%s,`matchBrief_blue_isTeam1Surrogate`=%s,`matchBrief_blue_isTeam2Surrogate`=%s,`matchBrief_finished`=%s,`red_minorPenalties`=%s,`red_majorPenalties`=%s,`red_navigated1`=%s,`red_navigated2`=%s,`red_wobbleDelivered1`=%s,`red_wobbleDelivered2`=%s,`red_autoTowerLow`=%s,`red_autoTowerMid`=%s,`red_autoTowerHigh`=%s,`red_autoPowerShotLeft`=%s,`red_autoPowerShotCenter`=%s,`red_autoPowerShotRight`=%s,`red_driverControlledTowerLow`=%s,`red_driverControlledTowerMid`=%s,`red_driverControlledTowerHigh`=%s,`red_wobbleEnd1`=%s,`red_wobbleEnd2`=%s,`red_wobbleRings1`=%s,`red_wobbleRings2`=%s,`red_endgamePowerShotLeft`=%s,`red_endgamePowerShotCenter`=%s,`red_endgamePowerShotRight`=%s,`red_autoTowerPoints`=%s,`red_autoWobblePoints`=%s,`red_navigationPoints`=%s,`red_autoPowerShotPoints`=%s,`red_driverControlledTowerPoints`=%s,`red_endgamePowerShotPoints`=%s,`red_wobbleRingPoints`=%s,`red_endgameWobblePoints`=%s,`red_totalPoints`=%s,`red_auto`=%s,`red_teleop`=%s,`red_end`=%s,`red_penalty`=%s,`red_dq1`=%s,`red_dq2`=%s,`blue_minorPenalties`=%s,`blue_majorPenalties`=%s,`blue_navigated1`=%s,`blue_navigated2`=%s,`blue_wobbleDelivered1`=%s,`blue_wobbleDelivered2`=%s,`blue_autoTowerLow`=%s,`blue_autoTowerMid`=%s,`blue_autoTowerHigh`=%s,`blue_autoPowerShotLeft`=%s,`blue_autoPowerShotCenter`=%s,`blue_autoPowerShotRight`=%s,`blue_driverControlledTowerLow`=%s,`blue_driverControlledTowerMid`=%s,`blue_driverControlledTowerHigh`=%s,`blue_wobbleEnd1`=%s,`blue_wobbleEnd2`=%s,`blue_wobbleRings1`=%s,`blue_wobbleRings2`=%s,`blue_endgamePowerShotLeft`=%s,`blue_endgamePowerShotCenter`=%s,`blue_endgamePowerShotRight`=%s,`blue_autoTowerPoints`=%s,`blue_autoWobblePoints`=%s,`blue_navigationPoints`=%s,`blue_autoPowerShotPoints`=%s,`blue_driverControlledTowerPoints`=%s,`blue_endgamePowerShotPoints`=%s,`blue_wobbleRingPoints`=%s,`blue_endgameWobblePoints`=%s,`blue_totalPoints`=%s,`blue_auto`=%s,`blue_teleop`=%s,`blue_end`=%s,`blue_penalty`=%s,`blue_dq1`=%s,`blue_dq2`=%s WHERE `eventCode` = %s AND matchBrief_matchNumber = %s".format(table_name=mySQL_TABLE)
+                
+                
+                SQLData = (self.eventCode, max(1, (matchResults["startTime"]/1000)), max(1, (matchResults["scheduledTime"]/1000)), max(1, (matchResults["resultPostedTime"]/1000)), matchResults["redScore"], matchResults["blueScore"], matchResults["randomization"], matchResults["matchBrief"]["matchState"], max(1, (matchResults["matchBrief"]["time"]/1000)), matchResults["matchBrief"]["matchName"], matchResults["matchBrief"]["matchNumber"], matchResults["matchBrief"]["field"], matchResults["matchBrief"]["red"]["team1"], matchResults["matchBrief"]["red"]["team2"], matchResults["matchBrief"]["red"]["isTeam1Surrogate"], matchResults["matchBrief"]["red"]["isTeam2Surrogate"], matchResults["matchBrief"]["blue"]["team1"], matchResults["matchBrief"]["blue"]["team2"], matchResults["matchBrief"]["blue"]["isTeam1Surrogate"], matchResults["matchBrief"]["blue"]["isTeam2Surrogate"], matchResults["matchBrief"]["finished"], matchResults["red"]["minorPenalties"], matchResults["red"]["majorPenalties"], matchResults["red"]["navigated1"], matchResults["red"]["navigated2"], matchResults["red"]["wobbleDelivered1"], matchResults["red"]["wobbleDelivered2"], matchResults["red"]["autoTowerLow"], matchResults["red"]["autoTowerMid"], matchResults["red"]["autoTowerHigh"], matchResults["red"]["autoPowerShotLeft"], matchResults["red"]["autoPowerShotCenter"], matchResults["red"]["autoPowerShotRight"], matchResults["red"]["driverControlledTowerLow"], matchResults["red"]["driverControlledTowerMid"], matchResults["red"]["driverControlledTowerHigh"], matchResults["red"]["wobbleEnd1"], matchResults["red"]["wobbleEnd2"], matchResults["red"]["wobbleRings1"], matchResults["red"]["wobbleRings2"], matchResults["red"]["endgamePowerShotLeft"], matchResults["red"]["endgamePowerShotCenter"], matchResults["red"]["endgamePowerShotRight"], matchResults["red"]["autoTowerPoints"], matchResults["red"]["autoWobblePoints"], matchResults["red"]["navigationPoints"], matchResults["red"]["autoPowerShotPoints"], matchResults["red"]["driverControlledTowerPoints"], matchResults["red"]["endgamePowerShotPoints"], matchResults["red"]["wobbleRingPoints"], matchResults["red"]["endgameWobblePoints"], matchResults["red"]["totalPoints"], matchResults["red"]["auto"], matchResults["red"]["teleop"], matchResults["red"]["end"], matchResults["red"]["penalty"], matchResults["red"]["dq1"], matchResults["red"]["dq2"], matchResults["blue"]["minorPenalties"], matchResults["blue"]["majorPenalties"], matchResults["blue"]["navigated1"], matchResults["blue"]["navigated2"], matchResults["blue"]["wobbleDelivered1"], matchResults["blue"]["wobbleDelivered2"], matchResults["blue"]["autoTowerLow"], matchResults["blue"]["autoTowerMid"], matchResults["blue"]["autoTowerHigh"], matchResults["blue"]["autoPowerShotLeft"], matchResults["blue"]["autoPowerShotCenter"], matchResults["blue"]["autoPowerShotRight"], matchResults["blue"]["driverControlledTowerLow"], matchResults["blue"]["driverControlledTowerMid"], matchResults["blue"]["driverControlledTowerHigh"], matchResults["blue"]["wobbleEnd1"], matchResults["blue"]["wobbleEnd2"], matchResults["blue"]["wobbleRings1"], matchResults["blue"]["wobbleRings2"], matchResults["blue"]["endgamePowerShotLeft"], matchResults["blue"]["endgamePowerShotCenter"], matchResults["blue"]["endgamePowerShotRight"], matchResults["blue"]["autoTowerPoints"], matchResults["blue"]["autoWobblePoints"], matchResults["blue"]["navigationPoints"], matchResults["blue"]["autoPowerShotPoints"], matchResults["blue"]["driverControlledTowerPoints"], matchResults["blue"]["endgamePowerShotPoints"], matchResults["blue"]["wobbleRingPoints"], matchResults["blue"]["endgameWobblePoints"], matchResults["blue"]["totalPoints"], matchResults["blue"]["auto"], matchResults["blue"]["teleop"], matchResults["blue"]["end"], matchResults["blue"]["penalty"], matchResults["blue"]["dq1"], matchResults["blue"]["dq2"], self.eventCode, matchResults["matchBrief"]["matchNumber"])
+                
+            else:
+                SQLStatement = "INSERT INTO {table_name} (`eventCode`, `startTime`, `scheduledTime`, `resultPostedTime`, `redScore`, `blueScore`, `randomization`, `matchBrief_matchState`, `matchBrief_time`, `matchBrief_matchName`, `matchBrief_matchNumber`, `matchBrief_field`, `matchBrief_red_team1`, `matchBrief_red_team2`, `matchBrief_red_isTeam1Surrogate`, `matchBrief_red_isTeam2Surrogate`, `matchBrief_blue_team1`, `matchBrief_blue_team2`, `matchBrief_blue_isTeam1Surrogate`, `matchBrief_blue_isTeam2Surrogate`, `matchBrief_finished`, `red_minorPenalties`, `red_majorPenalties`, `red_navigated1`, `red_navigated2`, `red_wobbleDelivered1`, `red_wobbleDelivered2`, `red_autoTowerLow`, `red_autoTowerMid`, `red_autoTowerHigh`, `red_autoPowerShotLeft`, `red_autoPowerShotCenter`, `red_autoPowerShotRight`, `red_driverControlledTowerLow`, `red_driverControlledTowerMid`, `red_driverControlledTowerHigh`, `red_wobbleEnd1`, `red_wobbleEnd2`, `red_wobbleRings1`, `red_wobbleRings2`, `red_endgamePowerShotLeft`, `red_endgamePowerShotCenter`, `red_endgamePowerShotRight`, `red_autoTowerPoints`, `red_autoWobblePoints`, `red_navigationPoints`, `red_autoPowerShotPoints`, `red_driverControlledTowerPoints`, `red_endgamePowerShotPoints`, `red_wobbleRingPoints`, `red_endgameWobblePoints`, `red_totalPoints`, `red_auto`, `red_teleop`, `red_end`, `red_penalty`, `red_dq1`, `red_dq2`, `blue_minorPenalties`, `blue_majorPenalties`, `blue_navigated1`, `blue_navigated2`, `blue_wobbleDelivered1`, `blue_wobbleDelivered2`, `blue_autoTowerLow`, `blue_autoTowerMid`, `blue_autoTowerHigh`, `blue_autoPowerShotLeft`, `blue_autoPowerShotCenter`, `blue_autoPowerShotRight`, `blue_driverControlledTowerLow`, `blue_driverControlledTowerMid`, `blue_driverControlledTowerHigh`, `blue_wobbleEnd1`, `blue_wobbleEnd2`, `blue_wobbleRings1`, `blue_wobbleRings2`, `blue_endgamePowerShotLeft`, `blue_endgamePowerShotCenter`, `blue_endgamePowerShotRight`, `blue_autoTowerPoints`, `blue_autoWobblePoints`, `blue_navigationPoints`, `blue_autoPowerShotPoints`, `blue_driverControlledTowerPoints`, `blue_endgamePowerShotPoints`, `blue_wobbleRingPoints`, `blue_endgameWobblePoints`, `blue_totalPoints`, `blue_auto`, `blue_teleop`, `blue_end`, `blue_penalty`, `blue_dq1`, `blue_dq2`) VALUES (%s,FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),%s,%s,%s,%s,FROM_UNIXTIME(%s),%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);".format(table_name=mySQL_TABLE)
+            
+                SQLData = (self.eventCode, max(1, (matchResults["startTime"]/1000)), max(1, (matchResults["scheduledTime"]/1000)), max(1, (matchResults["resultPostedTime"]/1000)), matchResults["redScore"], matchResults["blueScore"], matchResults["randomization"], matchResults["matchBrief"]["matchState"], max(1, (matchResults["matchBrief"]["time"]/1000)), matchResults["matchBrief"]["matchName"], matchResults["matchBrief"]["matchNumber"], matchResults["matchBrief"]["field"], matchResults["matchBrief"]["red"]["team1"], matchResults["matchBrief"]["red"]["team2"], matchResults["matchBrief"]["red"]["isTeam1Surrogate"], matchResults["matchBrief"]["red"]["isTeam2Surrogate"], matchResults["matchBrief"]["blue"]["team1"], matchResults["matchBrief"]["blue"]["team2"], matchResults["matchBrief"]["blue"]["isTeam1Surrogate"], matchResults["matchBrief"]["blue"]["isTeam2Surrogate"], matchResults["matchBrief"]["finished"], matchResults["red"]["minorPenalties"], matchResults["red"]["majorPenalties"], matchResults["red"]["navigated1"], matchResults["red"]["navigated2"], matchResults["red"]["wobbleDelivered1"], matchResults["red"]["wobbleDelivered2"], matchResults["red"]["autoTowerLow"], matchResults["red"]["autoTowerMid"], matchResults["red"]["autoTowerHigh"], matchResults["red"]["autoPowerShotLeft"], matchResults["red"]["autoPowerShotCenter"], matchResults["red"]["autoPowerShotRight"], matchResults["red"]["driverControlledTowerLow"], matchResults["red"]["driverControlledTowerMid"], matchResults["red"]["driverControlledTowerHigh"], matchResults["red"]["wobbleEnd1"], matchResults["red"]["wobbleEnd2"], matchResults["red"]["wobbleRings1"], matchResults["red"]["wobbleRings2"], matchResults["red"]["endgamePowerShotLeft"], matchResults["red"]["endgamePowerShotCenter"], matchResults["red"]["endgamePowerShotRight"], matchResults["red"]["autoTowerPoints"], matchResults["red"]["autoWobblePoints"], matchResults["red"]["navigationPoints"], matchResults["red"]["autoPowerShotPoints"], matchResults["red"]["driverControlledTowerPoints"], matchResults["red"]["endgamePowerShotPoints"], matchResults["red"]["wobbleRingPoints"], matchResults["red"]["endgameWobblePoints"], matchResults["red"]["totalPoints"], matchResults["red"]["auto"], matchResults["red"]["teleop"], matchResults["red"]["end"], matchResults["red"]["penalty"], matchResults["red"]["dq1"], matchResults["red"]["dq2"], matchResults["blue"]["minorPenalties"], matchResults["blue"]["majorPenalties"], matchResults["blue"]["navigated1"], matchResults["blue"]["navigated2"], matchResults["blue"]["wobbleDelivered1"], matchResults["blue"]["wobbleDelivered2"], matchResults["blue"]["autoTowerLow"], matchResults["blue"]["autoTowerMid"], matchResults["blue"]["autoTowerHigh"], matchResults["blue"]["autoPowerShotLeft"], matchResults["blue"]["autoPowerShotCenter"], matchResults["blue"]["autoPowerShotRight"], matchResults["blue"]["driverControlledTowerLow"], matchResults["blue"]["driverControlledTowerMid"], matchResults["blue"]["driverControlledTowerHigh"], matchResults["blue"]["wobbleEnd1"], matchResults["blue"]["wobbleEnd2"], matchResults["blue"]["wobbleRings1"], matchResults["blue"]["wobbleRings2"], matchResults["blue"]["endgamePowerShotLeft"], matchResults["blue"]["endgamePowerShotCenter"], matchResults["blue"]["endgamePowerShotRight"], matchResults["blue"]["autoTowerPoints"], matchResults["blue"]["autoWobblePoints"], matchResults["blue"]["navigationPoints"], matchResults["blue"]["autoPowerShotPoints"], matchResults["blue"]["driverControlledTowerPoints"], matchResults["blue"]["endgamePowerShotPoints"], matchResults["blue"]["wobbleRingPoints"], matchResults["blue"]["endgameWobblePoints"], matchResults["blue"]["totalPoints"], matchResults["blue"]["auto"], matchResults["blue"]["teleop"], matchResults["blue"]["end"], matchResults["blue"]["penalty"], matchResults["blue"]["dq1"], matchResults["blue"]["dq2"])
+
+            try:
+                self.mySQLCursor.execute(SQLStatement, SQLData)
+                self.mySQLConnection.commit()
+            except mysql.connector.Error as err:
+                self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to INSERT into the SQL Database.")
+                self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
+                self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
+                
+            #Send the message to the production channels
+            await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------MATCH RESULTS------------------------------" + "\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Red Score: " + str(matchResults["redScore"]) + "\n\n\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Blue Auto: " + str(matchResults["blue"]["auto"]) + "\n" + "Blue Tele: " + str(matchResults["blue"]["teleop"]) + "\n" + "Blue End: " + str(matchResults["blue"]["end"]) + "\n" + "Blue Penalty: " + str(matchResults["blue"]["penalty"]) + "\n\n" + "Red Score: " + str(matchResults["redScore"]) + "\n" + "Red Auto: " + str(matchResults["red"]["auto"]) + "\n" + "Red Tele: " + str(matchResults["red"]["teleop"]) + "\n" + "Red End: " + str(matchResults["red"]["end"]) + "\n" + "Red Penalty: " + str(matchResults["red"]["penalty"]) + """```""")
+            
     #Post
     async def matchPost(self, json_data):     
-        channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-        ctx = await channel.send("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
+        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
         
     async def matchAbort(self, json_data):     
-        channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-        ctx = await channel.send("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
-        await ctx.add_reaction('⚠')
-        await ctx.add_reaction('🚨')
-    
+        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
+        #TODO: Fix reactions. This is broken because my custom functions do not return a CTX
+        #await ctx.add_reaction('⚠')
+        #await ctx.add_reaction('🚨')
+    '''
     async def deleteLastMessage(self):
         channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
         lastMessage = channel.history("bot-testing", limit=1)
         channel.delete_messages(lastMessage)
-        
+    '''
+    
     async def startWebSocket(self):
         self.logger.info("[" + self.name + "] " + "Starting Websocket")
-        uri = FTCEVENTSERVER_WEBSOCKETURL + "/api/v2/stream/?code=" + self.name
+        uri = FTCEVENTSERVER_WEBSOCKETURL + "/api/v2/stream/?code=" + self.eventCode
+        self.logger.debug("[" + self.name + "] Atempting WebSocket connection to the following URL: " + uri)
         async with websockets.connect(uri) as websocket:
-            channel = self.bot.get_channel(self.BOTADMINCHANNEL_ID)
             self.logger.info("[" + self.name + "] " + "Monitoring Event: " + self.name)
-            await channel.send("Monitoring Event: " + self.name)
+            await self.sendAdmin("Monitoring Event: " + self.name)
             while True:
                 try:
                     #Get the data from the websocket
@@ -171,5 +223,18 @@ class FTCEvent:
     async def stopWebSocket(self):
         self.logger.info("[" + self.name + "] " + "Stopped Monitoring Event: " + self.name)
         self.task.cancel()
-        channel = self.bot.get_channel(self.BOTADMINCHANNEL_ID)
-        await channel.send("Stopped Monitoring Event: " + self.name)   
+        self.mySQLCursor.close()
+        self.mySQLConnection.close()
+        await self.sendAdmin("Stopped Monitoring Event: " + self.name)
+
+    async def sendAdmin(self, message):
+        for adminChannel in self.AllDiscordChannels:
+            if adminChannel.isAdmin:
+                channel = self.bot.get_channel(adminChannel.id)
+                await channel.send(message)
+
+    async def sendProduction(self, message):
+        for prodChannel in self.AllDiscordChannels:
+            if not prodChannel.isAdmin:
+                channel = self.bot.get_channel(prodChannel.id)
+                await channel.send(message)
