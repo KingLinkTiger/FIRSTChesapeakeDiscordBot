@@ -40,3 +40,4 @@ Date | Description
 13NOV20 | v1.0.6 - Changed Admin Role to ENV variable
 31JAN21 | v1.0.7 - Updated base image version, Updated requirements to latest, Fixed issue with websocket, ability to set multiple admin and production channels, added saving match results to mySQL server on comit.
 7FEB21 | v1.0.7 - Added BOTMATCHRESULTCHANNELS ENV Variable, configured match results to only send to that channel, and configured bot to allow team commands from all but that channel.
+7FEB21 | v1.0.8 - Fixed Match Results to post only to Match Results channel, also updated example.env file.

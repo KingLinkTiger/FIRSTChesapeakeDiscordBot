@@ -100,10 +100,10 @@ class FTCEvent:
             blue2 = matchBrief["matchBrief"]["blue"]["team2"]
             
             #Access to the Discord Client
-            await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH LOADED" + "\n" + "--------------------------------------------------" + "\n" + "Red  1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red  2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")
+            await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH LOADED" + "\n" + "--------------------------------------------------" + "\n" + "Red  1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red  2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")
             
     async def matchStart(self, json_data):     
-        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""") 
+        await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""") 
         
     async def matchCommit(self, json_data):         
         if json_data["payload"]["shortName"][0] == 'Q':
@@ -163,14 +163,14 @@ class FTCEvent:
             self.mySQLConnection.close()
             
             #Send the message to the production channels
-            await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------MATCH RESULTS------------------------------" + "\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Red Score: " + str(matchResults["redScore"]) + "\n\n\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Blue Auto: " + str(matchResults["blue"]["auto"]) + "\n" + "Blue Tele: " + str(matchResults["blue"]["teleop"]) + "\n" + "Blue End: " + str(matchResults["blue"]["end"]) + "\n" + "Blue Penalty: " + str(matchResults["blue"]["penalty"]) + "\n\n" + "Red Score: " + str(matchResults["redScore"]) + "\n" + "Red Auto: " + str(matchResults["red"]["auto"]) + "\n" + "Red Tele: " + str(matchResults["red"]["teleop"]) + "\n" + "Red End: " + str(matchResults["red"]["end"]) + "\n" + "Red Penalty: " + str(matchResults["red"]["penalty"]) + """```""")
+            await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------MATCH RESULTS------------------------------" + "\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Red Score: " + str(matchResults["redScore"]) + "\n\n\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Blue Auto: " + str(matchResults["blue"]["auto"]) + "\n" + "Blue Tele: " + str(matchResults["blue"]["teleop"]) + "\n" + "Blue End: " + str(matchResults["blue"]["end"]) + "\n" + "Blue Penalty: " + str(matchResults["blue"]["penalty"]) + "\n\n" + "Red Score: " + str(matchResults["redScore"]) + "\n" + "Red Auto: " + str(matchResults["red"]["auto"]) + "\n" + "Red Tele: " + str(matchResults["red"]["teleop"]) + "\n" + "Red End: " + str(matchResults["red"]["end"]) + "\n" + "Red Penalty: " + str(matchResults["red"]["penalty"]) + """```""")
             
     #Post
     async def matchPost(self, json_data):     
-        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
+        await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
         
     async def matchAbort(self, json_data):     
-        await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
+        await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
         #TODO: Fix reactions. This is broken because my custom functions do not return a CTX
         #await ctx.add_reaction('⚠')
         #await ctx.add_reaction('🚨')
@@ -234,8 +234,8 @@ class FTCEvent:
                 channel = self.bot.get_channel(adminChannel.id)
                 await channel.send(message)
 
-    async def sendProduction(self, message):
+    async def sendMatchResult(self, message):
         for prodChannel in self.AllDiscordChannels:
-            if not prodChannel.channelType == 1:
+            if prodChannel.channelType == 3:
                 channel = self.bot.get_channel(prodChannel.id)
                 await channel.send(message)
