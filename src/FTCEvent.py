@@ -6,6 +6,7 @@ import json
 import asyncio
 import websockets
 import logging
+import discord
 
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -15,6 +16,10 @@ from mysql.connector import Error
 
 from FTCTeam import FTCTeam
 from DiscordChannel import DiscordChannel
+
+#For TTS
+from gtts import gTTS
+from io import BytesIO
 
 load_dotenv()
 
@@ -102,8 +107,9 @@ class FTCEvent:
             #Access to the Discord Client
             await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH LOADED" + "\n" + "--------------------------------------------------" + "\n" + "Red  1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red  2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")
             
-    async def matchStart(self, json_data):     
-        await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""") 
+    async def matchStart(self, json_data):  
+        await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""")
+        await self.sendTTS(json_data["payload"]["shortName"] + " has started")
         
     async def matchCommit(self, json_data):         
         if json_data["payload"]["shortName"][0] == 'Q':
@@ -168,18 +174,14 @@ class FTCEvent:
     #Post
     async def matchPost(self, json_data):     
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
+        await self.sendTTS(json_data["payload"]["shortName"] + " has posted")
         
     async def matchAbort(self, json_data):     
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
+        await self.sendTTS("Warning " + json_data["payload"]["shortName"] + " was aborted")
         #TODO: Fix reactions. This is broken because my custom functions do not return a CTX
         #await ctx.add_reaction('⚠')
         #await ctx.add_reaction('🚨')
-    '''
-    async def deleteLastMessage(self):
-        channel = self.bot.get_channel(self.BOTPRODUCTIONCHANNEL_ID)
-        lastMessage = channel.history("bot-testing", limit=1)
-        channel.delete_messages(lastMessage)
-    '''
     
     async def startWebSocket(self):
         self.logger.info("[" + self.name + "] " + "Starting Websocket")
@@ -239,3 +241,18 @@ class FTCEvent:
             if prodChannel.channelType == 3:
                 channel = self.bot.get_channel(prodChannel.id)
                 await channel.send(message)
+                
+    async def sendTTS(self, message):
+        if not self.bot.voice_clients == None:
+            self.logger.debug("[sendTTS] " + "Trying to play sound file.")
+            #Temp Commented out
+            tts = gTTS(message, lang='en')
+            tts.save('output.mp3')
+            
+            #TODO Write the data to a data blob and just read it from there
+            #mp3_fp = BytesIO()
+            #tts.write_to_fp(mp3_fp)
+            
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'), volume=2.0)
+            for vc in self.bot.voice_clients:
+                vc.play(source, after=lambda e: self.logger.error('[sendTTS] Player error: %s' % e) if e else self.logger.info("[sendTTS] " + "Finished playing audio"))

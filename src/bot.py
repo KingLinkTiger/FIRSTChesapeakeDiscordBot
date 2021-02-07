@@ -20,6 +20,10 @@ import csv
 from FTCEvent import FTCEvent
 from DiscordChannel import DiscordChannel
 
+#For TTS
+from gtts import gTTS
+from io import BytesIO
+
 #Create cache file so we don't make unnecessary calls to the APIs 
 requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(timedelta(days=3)))
 
@@ -59,8 +63,16 @@ ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
 
 ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR')
 
+BOTTTSENABLED = os.getenv('BOTTTSENABLED')
+BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL')
 
-intents = discord.Intents.default()
+intents = discord.Intents(
+    messages=True,
+    guilds=True,
+    reactions=True,
+    members = True,
+    voice_states=True, # Add this!
+)
 intents.members = True
 bot = commands.Bot(command_prefix='!', case_insensitive=True, intents=intents)
 
@@ -202,6 +214,10 @@ async def event(ctx, verb: str, noun: str):
                 #Check that we received a valid eventcode
                 #Validate Event Code
                 
+                #If this is the first event we are monitoring join voice
+                if len(events) == 0 and BOTTTSENABLED:
+                    await voiceJoin()
+                    
                 try:
                     apiheaders = {'Content-Type':'application/json'}
                     response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + noun + "/", headers=apiheaders, timeout=3)
@@ -238,6 +254,11 @@ async def event(ctx, verb: str, noun: str):
                 await events[noun].stopWebSocket()
                 del events[noun]
                 await ctx.message.add_reaction('🛑')
+                
+                #If this is the last event we were monitoring disconnect voice
+                if len(events) == 0 and BOTTTSENABLED:
+                    await voiceStop()
+                
             else:
                 logger.error("Unable to remove event! Event code was not being monitored by system: " + noun + ".")
                 await ctx.send("ERROR: System is not monitoring event " + noun)
@@ -293,8 +314,8 @@ async def clear(ctx, amount: int):
     
     # Check from https://stackoverflow.com/questions/53643906/discord-py-delete-all-messages-except-pin-messages
     await ctx.channel.purge(limit=amount + 1, check=lambda msg: not msg.pinned)
-
-
+        
+        
 # ===== END COMMANDS SECTION =====
 
 # ===== START BOT EVENT SECTION ===== 
@@ -308,7 +329,7 @@ async def on_command_error(ctx, error):
 async def on_ready():
     # Check if we have a valid API key
     checkFTCEVENTSERVER_APIKey()
-    
+        
     # Get the Channel IDs for the channels we need
     findChannels()
     
@@ -325,6 +346,17 @@ async def on_member_join(member):
 
 
 # ===== START FUNCTION SECTION ===== 
+async def voiceJoin():
+    for channel in bot.get_all_channels(): 
+        if channel.name.lower() == BOTTTSCHANNEL.lower() and str(channel.type) == "voice":
+            logger.info("[" + channel.name + "] " + "Channel ID Found: "  + str(channel.id))
+            voiceClient = await channel.connect()
+            break
+            
+async def voiceStop():
+    for vc in bot.voice_clients:
+        await vc.disconnect()
+
 def checkFTCEVENTSERVER_APIKey():
     if FTCEVENTSERVER_APIKey:
         try:
@@ -394,26 +426,6 @@ def findChannels():
         
     for channel in DiscordChannel.AllDiscordChannels:
         logger.debug("[findChannels] " + channel.name)
-        
-    '''
-    global BOTPRODUCTIONCHANNEL_ID
-    global BOTADMINCHANNEL_ID
-    #ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]
-    channels = bot.get_all_channels()
-    for channel in channels:       
-        if channel.name.lower() == BOTPRODUCTIONCHANNEL.lower() and str(channel.type) == "text":
-            BOTPRODUCTIONCHANNEL_ID = channel.id
-            logger.info("Bot Production Channel found: " + str(channel.id))
-        elif channel.name.lower() == BOTADMINCHANNEL.lower() and str(channel.type) == "text":
-            BOTADMINCHANNEL_ID = channel.id
-            logger.info("Bot Admin Channel found: " + str(channel.id))
-    
-    if BOTPRODUCTIONCHANNEL_ID == None:
-        logger.error("Unable to locate Bot Production Channel")
-        
-    if BOTADMINCHANNEL_ID == None:
-        logger.error("Unable to locate Bot Admin Channel")
-    '''
 
 async def stopWebSockets():
     #Stop the websocket for each event
@@ -428,6 +440,8 @@ async def stopDiscordBot():
     await bot.logout()   
 
 async def stopBot():
+    await voiceStop()
+
     f_task1 = asyncio.create_task(stopWebSockets())
     await f_task1
 

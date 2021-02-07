@@ -7,6 +7,8 @@ This is a Docker Image of a Discord Bot for the FIRST Chesapeake Discord Server.
 This bot is able to pull information from the  [FIRST](https://www.firstinspires.org/) [FTC API](https://ftc-events.firstinspires.org/), [FIRST](https://www.firstinspires.org/) [FRC API](https://frc-events.firstinspires.org/), and [The Orange Alliance API](https://theorangealliance.org/home). The bot is also capable of retrieving live information from the [FIRST Tech Challenge
 ](https://github.com/FIRST-Tech-Challenge/scorekeeper) scorekeeping software (EMS).
 
+This Docker image is being pushed to [Docker Hub](https://hub.docker.com/repository/docker/kinglinktiger/firstchesapeakediscordbot)
+
 ## INSTALLATION
 1. Update the .env file with your API Keys, what Discord Channel you want the bot to receive commands from, and what Discord Channel you want to send the live FTC event information to.
 2. Run the bot.
@@ -41,3 +43,4 @@ Date | Description
 31JAN21 | v1.0.7 - Updated base image version, Updated requirements to latest, Fixed issue with websocket, ability to set multiple admin and production channels, added saving match results to mySQL server on comit.
 7FEB21 | v1.0.7 - Added BOTMATCHRESULTCHANNELS ENV Variable, configured match results to only send to that channel, and configured bot to allow team commands from all but that channel.
 7FEB21 | v1.0.8 - Fixed Match Results to post only to Match Results channel, also updated example.env file.
+7FEB21 | v1.1.0 - Added voice announcments for match status (Start, Post, Abort).
