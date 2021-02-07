@@ -38,4 +38,5 @@ Date | Description
 1NOV20 | Initial Release (v1.0)
 2NOV20 | v1.0.1 - Added: Auto Assign new users the "Needs Registration" Role, Clear/Sweep Command, Modified bot to also listen for all commands on the Admin channel as well
 13NOV20 | v1.0.6 - Changed Admin Role to ENV variable
-31JAN21 | v1.0.7 - Updated base image version, Updated requirements to latest, Fixed issue with websocket, ability to set multiple admin and production channels.
+31JAN21 | v1.0.7 - Updated base image version, Updated requirements to latest, Fixed issue with websocket, ability to set multiple admin and production channels, added saving match results to mySQL server on comit.
+7FEB21 | v1.0.7 - Added BOTMATCHRESULTCHANNELS ENV Variable, configured match results to only send to that channel, and configured bot to allow team commands from all but that channel.

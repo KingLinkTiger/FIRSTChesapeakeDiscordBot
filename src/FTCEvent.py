@@ -47,16 +47,6 @@ class FTCEvent:
         #self.lastState = ""
         
         self.getTeams()
-        
-        self.logger.info("[" + self.name + "][mySQL] " + "Trying to connect to SQL Database")
-        try:
-            self.mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
-            self.mySQLCursor = self.mySQLConnection.cursor()
-            self.logger.info("[" + self.name + "][mySQL] " + "Connected to SQL Database")
-        except mysql.connector.Error as err:
-            self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to connect to SQL Database.")
-            self.logger.error("[" + self.name + "][mySQL] " + err.msg)
-
 
         self.task = asyncio.create_task(self.startWebSocket())
 
@@ -126,6 +116,15 @@ class FTCEvent:
             matchResults = json.loads(response.text)
         
             #Save the data to the SQL Server
+            #Only connect to the SQL server when we're about to write to the DB otherwise the connection dies after a while or on mySQL reboots
+            self.logger.info("[" + self.name + "][mySQL] " + "Trying to connect to SQL Database")
+            try:
+                self.mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+                self.mySQLCursor = self.mySQLConnection.cursor()
+                self.logger.info("[" + self.name + "][mySQL] " + "Connected to SQL Database")
+            except mysql.connector.Error as err:
+                self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to connect to SQL Database.")
+                self.logger.error("[" + self.name + "][mySQL] " + err.msg)
             
             #Check if the match already exists in the DB
             SQLStatement = "SELECT EXISTS(SELECT * FROM {table_name} WHERE `eventCode` = %s AND `matchBrief_matchNumber` = %s)".format(table_name=mySQL_TABLE)
@@ -159,6 +158,10 @@ class FTCEvent:
                 self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
                 self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
                 
+            #Cleanly close the cursor and connection once complete
+            self.mySQLCursor.close()
+            self.mySQLConnection.close()
+            
             #Send the message to the production channels
             await self.sendProduction("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "--------------------MATCH RESULTS------------------------------" + "\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Red Score: " + str(matchResults["redScore"]) + "\n\n\n" + "Blue Score: " + str(matchResults["blueScore"]) + "\n" + "Blue Auto: " + str(matchResults["blue"]["auto"]) + "\n" + "Blue Tele: " + str(matchResults["blue"]["teleop"]) + "\n" + "Blue End: " + str(matchResults["blue"]["end"]) + "\n" + "Blue Penalty: " + str(matchResults["blue"]["penalty"]) + "\n\n" + "Red Score: " + str(matchResults["redScore"]) + "\n" + "Red Auto: " + str(matchResults["red"]["auto"]) + "\n" + "Red Tele: " + str(matchResults["red"]["teleop"]) + "\n" + "Red End: " + str(matchResults["red"]["end"]) + "\n" + "Red Penalty: " + str(matchResults["red"]["penalty"]) + """```""")
             
@@ -223,18 +226,16 @@ class FTCEvent:
     async def stopWebSocket(self):
         self.logger.info("[" + self.name + "] " + "Stopped Monitoring Event: " + self.name)
         self.task.cancel()
-        self.mySQLCursor.close()
-        self.mySQLConnection.close()
         await self.sendAdmin("Stopped Monitoring Event: " + self.name)
 
     async def sendAdmin(self, message):
         for adminChannel in self.AllDiscordChannels:
-            if adminChannel.isAdmin:
+            if adminChannel.channelType == 1:
                 channel = self.bot.get_channel(adminChannel.id)
                 await channel.send(message)
 
     async def sendProduction(self, message):
         for prodChannel in self.AllDiscordChannels:
-            if not prodChannel.isAdmin:
+            if not prodChannel.channelType == 1:
                 channel = self.bot.get_channel(prodChannel.id)
                 await channel.send(message)

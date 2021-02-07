@@ -13,12 +13,12 @@ class DiscordChannel:
     logger = logging.getLogger('FIRSTChesapeakeBot')
     AllDiscordChannels = []
 
-    def __init__(self, bot, ALLCHANNELS, CHANNELNAME, isAdmin): 
+    def __init__(self, bot, ALLCHANNELS, CHANNELNAME, channelType): 
         self.name = CHANNELNAME
         self.allchannels = ALLCHANNELS
         self.bot = bot
         self.id = None
-        self.isAdmin = isAdmin
+        self.channelType = channelType
         
         self.getChannelID()
         

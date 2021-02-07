@@ -51,6 +51,7 @@ BOTADMINCHANNELS = os.getenv('BOTADMINCHANNELS')
 
 BOTPRODUCTIONCHANNELS = os.getenv('BOTPRODUCTIONCHANNELS')
 
+BOTMATCHRESULTCHANNELS = os.getenv('BOTMATCHRESULTCHANNELS')
 
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
@@ -71,7 +72,7 @@ events = {}
 
 @bot.command(name='ftcteamtoa')
 async def getFTCTeamDataTOA(ctx, team_number: str):
-    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
     #if ctx.message.channel.name == BOTPRODUCTIONCHANNEL or ctx.message.channel.name == BOTADMINCHANNEL:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from TOA.")
@@ -104,7 +105,7 @@ async def getFTCTeamDataTOA(ctx, team_number: str):
   
 @bot.command(name='ftcteam')
 async def getFTCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
         teamNumberInt = int(team_number)
         if team_number.isnumeric() and teamNumberInt >= 0 and len(team_number) <= 5:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FTC DB.")
@@ -148,7 +149,7 @@ async def getFTCTeamData(ctx, team_number: str):
 
 @bot.command(name='frcteam')
 async def getFRCTeamData(ctx, team_number: str):
-    if ctx.message.channel.name in [y.name.lower() for y in DiscordChannel.AllDiscordChannels]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 4:
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FRC DB.")
             
@@ -189,7 +190,7 @@ async def ftc(ctx):
 
 @ftc.command()
 async def event(ctx, verb: str, noun: str): 
-    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.isAdmin] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
     #if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
         
@@ -245,7 +246,7 @@ async def event(ctx, verb: str, noun: str):
 
 @ftc.command()
 async def server(ctx, verb: str, noun: str):
-    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.isAdmin] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         formattedVerb = verb.lower()
@@ -288,7 +289,7 @@ async def server(ctx, verb: str, noun: str):
 @commands.has_permissions(manage_messages=True) 
 #only those with the permission to manage messages can use this command
 async def clear(ctx, amount: int):
-    logger.warning(ctx.message.author.display_name + " has requested the removal of " + str(amount + 1) + " messages from channel " + ctx.message.channel.name)
+    logger.warning(ctx.message.author.display_name + " has requested the removal of " + str(amount) + " messages from channel " + ctx.message.channel.name)
     
     # Check from https://stackoverflow.com/questions/53643906/discord-py-delete-all-messages-except-pin-messages
     await ctx.channel.purge(limit=amount + 1, check=lambda msg: not msg.pinned)
@@ -361,6 +362,11 @@ def findChannels():
         logger.error("BOTADMINCHANNELS is not set!")
         raise
     
+    if BOTMATCHRESULTCHANNELS == None:
+        #BOTMATCHRESULTCHANNELS is empty and needs to be handled
+        logger.error("BOTMATCHRESULTCHANNELS is not set!")
+        raise
+    
     if "," in str(BOTPRODUCTIONCHANNELS):
         f = StringIO(BOTPRODUCTIONCHANNELS)
         channels = next(csv.reader(f, delimiter=','))
@@ -376,6 +382,15 @@ def findChannels():
             DiscordChannel(bot, bot.get_all_channels(), channel, 1)
     else:
         DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
+        
+    if "," in str(BOTMATCHRESULTCHANNELS):
+        f = StringIO(BOTMATCHRESULTCHANNELS)
+        channels = next(csv.reader(f, delimiter=','))
+        for channel in channels:
+            DiscordChannel(bot, bot.get_all_channels(), channel, 3)
+    else:
+        DiscordChannel(bot, bot.get_all_channels(), BOTMATCHRESULTCHANNELS, 3)        
+        
         
     for channel in DiscordChannel.AllDiscordChannels:
         logger.debug("[findChannels] " + channel.name)
