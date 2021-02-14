@@ -27,12 +27,13 @@ None
 ## COMMANDS
 Command | Description
 ---- | ----
-!frcteam <Team Number> | Retrieves information about the supplied team from the FIRST FRC API
-!ftcteam <Team Number> | Retrieves information about the supplied team from the FIRST FTC API
-!ftcteamtoa <Team Number> | Retrieves information about the supplied team from the The Orange Alliance API
-!ftc event start/stop <Event Code> | *ADMIN COMMAND* Start/Stops the live event feed for the provided FTC Event Code
+!frcteam TeamNumber | Retrieves information about the supplied team from the FIRST FRC API
+!ftcteam TeamNumber | Retrieves information about the supplied team from the FIRST FTC API
+!ftcteamtoa TeamNumber | Retrieves information about the supplied team from the The Orange Alliance API
+!ftc event start EventCode eventName | *ADMIN COMMAND* Start/Stops the live event feed for the provided FTC Event Code
+!ftc event stop EventCode | *ADMIN COMMAND* Stops the live event feed for the provided FTC Event Code
 !ftc server get apikey | *ADMIN COMMAND* Request an API key from the FTC Scorekeeper Software. This will output the key to Discord and log.
-!clear <amount> | *ADMIN COMMAND* Removes the specified ammount of messages in a channel, excluding pinned messages.
+!clear amount | *ADMIN COMMAND* Removes the specified ammount of messages in a channel, excluding pinned messages.
 
 ## CHANGES
 Date | Description
@@ -44,3 +45,4 @@ Date | Description
 7FEB21 | v1.0.7 - Added BOTMATCHRESULTCHANNELS ENV Variable, configured match results to only send to that channel, and configured bot to allow team commands from all but that channel.
 7FEB21 | v1.0.8 - Fixed Match Results to post only to Match Results channel, also updated example.env file.
 7FEB21 | v1.1.0 - Added voice announcments for match status (Start, Post, Abort).
+14FEB21 | v1.1.1 - Added argument to event start for the event name. This gets passed to the voice announcments.

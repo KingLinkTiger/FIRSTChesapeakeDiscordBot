@@ -195,12 +195,85 @@ async def getFRCTeamData(ctx, team_number: str):
     else:
         logger.warning(ctx.message.author.display_name + " tried to invoke bot from " + ctx.message.channel.name + ".")
                 
-@bot.group()
+@bot.group(pass_context=True)
 async def ftc(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Invalid command passed...')
 
-@ftc.command()
+@ftc.group(pass_context=True)
+async def event(ctx):
+    if ctx.invoked_subcommand is event:
+        await ctx.send('Invalid sub command passed...')  
+
+@event.command(name='add', aliases=['start'])
+async def addEvent(ctx, eventCode, eventName):
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        
+        #If the event code is NOT already in the events DICT
+        if not eventCode in events:
+            #Check that we received a valid eventcode
+            #Validate Event Code
+            
+            #If this is the first event we are monitoring join voice
+            if len(events) == 0 and BOTTTSENABLED:
+                await voiceJoin()
+                
+            try:
+                apiheaders = {'Content-Type':'application/json'}
+                response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + eventCode + "/", headers=apiheaders, timeout=3)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                #Server is offline and needs to be handled
+                logger.error("Failed to contact FTC Event Server!")
+                await ctx.send("ERROR: Failed to contact FTC Event Server!")
+            else:
+                #We received a reply from the server
+                if response.status_code == 200:
+                    #Get basic event information from server API
+                    responseData = json.loads(response.text)
+                    
+                    #Create FTCEvent instance
+                    logger.info("[ftc event] Attempting to make FTCEvent Instance")
+                    #e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
+                    e = FTCEvent(responseData, bot, DiscordChannel.AllDiscordChannels.copy(), eventName)
+                    
+                    #Store instance in dict
+                    events[eventCode] = e
+
+                    #Add reaction to message to let user know it was created successfully
+                    await ctx.message.add_reaction('✅')
+
+                else:
+                    logger.warning(ctx.message.author.display_name + " provided an invalid event code to the FTC Event Command!")
+                    await ctx.send("ERROR: Invalid event code provided.")
+        else:
+            logger.info("Already monitoring event code " + eventCode + ".")
+            await ctx.send("ERROR: System is already monitoring event " + eventCode)
+    else:
+        logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
+
+@event.command(name='remove', aliases=['stop'])
+async def removeEvent(ctx, eventCode):
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+
+        if eventCode in events:
+            await events[eventCode].stopWebSocket()
+            del events[eventCode]
+            await ctx.message.add_reaction('🛑')
+            
+            #If this is the last event we were monitoring disconnect voice
+            if len(events) == 0 and BOTTTSENABLED:
+                await voiceStop()
+            
+        else:
+            logger.error("Unable to remove event! Event code was not being monitored by system: " + eventCode + ".")
+            await ctx.send("ERROR: System is not monitoring event " + eventCode)
+    else:
+        logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
+
+
+@ftc.command(name='event_O')
 async def event(ctx, verb: str, noun: str): 
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
     #if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:

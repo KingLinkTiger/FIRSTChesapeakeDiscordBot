@@ -38,8 +38,9 @@ mySQL_TABLE = os.getenv('mySQL_TABLE')
 class FTCEvent:
     logger = logging.getLogger('FIRSTChesapeakeBot')
   
-    def __init__(self, eventData, bot, AllDiscordChannels): 
+    def __init__(self, eventData, bot, AllDiscordChannels, eventName): 
         self.eventCode = eventData["eventCode"]
+        self.eventName = eventName
         self.name = eventData["name"]
         self.bot = bot
         self.AllDiscordChannels = AllDiscordChannels
@@ -109,7 +110,7 @@ class FTCEvent:
             
     async def matchStart(self, json_data):  
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""")
-        await self.sendTTS(json_data["payload"]["shortName"] + " has started")
+        await self.sendTTS(self.eventName + " has started")
         
     async def matchCommit(self, json_data):         
         if json_data["payload"]["shortName"][0] == 'Q':
@@ -174,11 +175,11 @@ class FTCEvent:
     #Post
     async def matchPost(self, json_data):     
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH POSTED" + """```""")
-        await self.sendTTS(json_data["payload"]["shortName"] + " has posted")
+        await self.sendTTS(self.eventName + " has posted")
         
     async def matchAbort(self, json_data):     
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
-        await self.sendTTS("Warning " + json_data["payload"]["shortName"] + " was aborted")
+        await self.sendTTS("Warning " + self.eventName + " has aborted")
         #TODO: Fix reactions. This is broken because my custom functions do not return a CTX
         #await ctx.add_reaction('⚠')
         #await ctx.add_reaction('🚨')
@@ -253,6 +254,6 @@ class FTCEvent:
             #mp3_fp = BytesIO()
             #tts.write_to_fp(mp3_fp)
             
-            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'), volume=2.0)
+            source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3', options="-loglevel panic"), volume=2.0)
             for vc in self.bot.voice_clients:
                 vc.play(source, after=lambda e: self.logger.error('[sendTTS] Player error: %s' % e) if e else self.logger.info("[sendTTS] " + "Finished playing audio"))
