@@ -63,8 +63,13 @@ ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
 
 ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR')
 
+#TTS ENV Variables
 BOTTTSENABLED = os.getenv('BOTTTSENABLED')
 BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL')
+
+#Reaction Monitor ENV Variables
+ID_ReactionMonitor = os.getenv('ID_ReactionMonitor')
+ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor')
 
 intents = discord.Intents(
     messages=True,
@@ -414,6 +419,16 @@ async def on_member_join(member):
     role = discord.utils.get(member.guild.roles, name=ROLE_NEWUSER)
     await member.add_roles(role)
 
+#This requires Intents.reactions to be enabled.
+@bot.event
+async def on_raw_reaction_add(payload):
+    # If a user adds a reaction to the specific Message then add the Alumni Role
+    if payload.message_id == int(ID_ReactionMonitor):
+        logger.info("[on_raw_reaction_add] " + payload.member.display_name + " has reacted to the Alumni message, adding them to the Alumni Role!")
+        role = discord.utils.get(payload.member.guild.roles, name=ROLE_ReactionMonitor)
+        await payload.member.add_roles(role)
+        
+#NOTE: I tried to remove the role when the user removes the reaction but payload.member is not exposed in the Discord.py API on removal...
 
 # ===== END BOT EVENT SECTION ===== 
 
