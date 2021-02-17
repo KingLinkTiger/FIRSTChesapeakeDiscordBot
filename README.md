@@ -47,3 +47,4 @@ Date | Description
 7FEB21 | v1.1.0 - Added voice announcments for match status (Start, Post, Abort).
 14FEB21 | v1.1.1 - Added argument to event start for the event name. This gets passed to the voice announcments.
 16FEB21 | v1.1.2 - Added ability to assign role to user when they react to a specific message.
+16FEB21 | v1.1.3 - Modifed react role. If user already had role remove it. If user is member of Auto Assigned role remove their reaction and do nothing.

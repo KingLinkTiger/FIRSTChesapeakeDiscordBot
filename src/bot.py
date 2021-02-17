@@ -411,6 +411,11 @@ async def on_ready():
     # Get the Channel IDs for the channels we need
     findChannels()
     
+    #React to the Alumni Message on bot start
+    tChannel = bot.get_channel(ID_Channel_ReactionMonitor)
+    tMessage = await tChannel.fetch_message(ID_Message_ReactionMonitor)
+    await tMessage.add_reaction('🤖')
+    
 
 @bot.event
 async def on_member_join(member):
@@ -423,10 +428,27 @@ async def on_member_join(member):
 @bot.event
 async def on_raw_reaction_add(payload):
     # If a user adds a reaction to the specific Message then add the Alumni Role
-    if payload.message_id == int(ID_ReactionMonitor):
-        logger.info("[on_raw_reaction_add] " + payload.member.display_name + " has reacted to the Alumni message, adding them to the Alumni Role!")
-        role = discord.utils.get(payload.member.guild.roles, name=ROLE_ReactionMonitor)
-        await payload.member.add_roles(role)
+    if payload.message_id == int(ID_Message_ReactionMonitor):
+        if ROLE_NEWUSER.lower() not in [y.name.lower() for y in payload.member.roles]:
+            if str(payload.emoji) == '🤖':
+                if ROLE_ReactionMonitor.lower() not in [y.name.lower() for y in payload.member.roles]:
+                    logger.info("[on_raw_reaction_add] " + payload.member.display_name + " has reacted to the Alumni message, adding them to the Alumni Role!")
+                    role = discord.utils.get(payload.member.guild.roles, name=ROLE_ReactionMonitor)
+                    await payload.member.add_roles(role)
+                else:
+                    logger.info("[on_raw_reaction_add] " + payload.member.display_name + " has reacted to the Alumni message but was already an added. Removing  them from the Alumni Role!")
+                    role = discord.utils.get(payload.member.guild.roles, name=ROLE_ReactionMonitor)
+                    await payload.member.remove_roles(role)
+                    
+                #Remove the user's reaction when done
+                tChannel = bot.get_channel(payload.channel_id)
+                tMessage = await tChannel.fetch_message(payload.message_id)
+                await tMessage.remove_reaction('🤖', payload.member)
+        else:
+            logger.info("[on_raw_reaction_add] " + payload.member.display_name + " who is a member of " + ROLE_NEWUSER + " tried to add the Alumni Role!")
+            tChannel = bot.get_channel(payload.channel_id)
+            tMessage = await tChannel.fetch_message(payload.message_id)
+            await tMessage.remove_reaction('🤖', payload.member)
         
 #NOTE: I tried to remove the role when the user removes the reaction but payload.member is not exposed in the Discord.py API on removal...
 
@@ -509,9 +531,8 @@ def findChannels():
         for channel in channels:
             DiscordChannel(bot, bot.get_all_channels(), channel, 3)
     else:
-        DiscordChannel(bot, bot.get_all_channels(), BOTMATCHRESULTCHANNELS, 3)        
-        
-        
+        DiscordChannel(bot, bot.get_all_channels(), BOTMATCHRESULTCHANNELS, 3)
+    
     for channel in DiscordChannel.AllDiscordChannels:
         logger.debug("[findChannels] " + channel.name)
 
