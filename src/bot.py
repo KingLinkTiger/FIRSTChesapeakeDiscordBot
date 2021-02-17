@@ -68,9 +68,9 @@ BOTTTSENABLED = os.getenv('BOTTTSENABLED')
 BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL')
 
 #Reaction Monitor ENV Variables
-ID_Message_ReactionMonitor = os.getenv('ID_Message_ReactionMonitor')
+ID_Message_ReactionMonitor = int(os.getenv('ID_Message_ReactionMonitor'))
 ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor')
-ID_Channel_ReactionMonitor = os.getenv('ID_Channel_ReactionMonitor')
+ID_Channel_ReactionMonitor = int(os.getenv('ID_Channel_ReactionMonitor'))
 
 intents = discord.Intents(
     messages=True,
@@ -428,6 +428,9 @@ async def on_member_join(member):
 #This requires Intents.reactions to be enabled.
 @bot.event
 async def on_raw_reaction_add(payload):
+    if payload.member.bot:
+        return
+
     # If a user adds a reaction to the specific Message then add the Alumni Role
     if payload.message_id == int(ID_Message_ReactionMonitor):
         if ROLE_NEWUSER.lower() not in [y.name.lower() for y in payload.member.roles]:
