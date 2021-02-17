@@ -68,8 +68,9 @@ BOTTTSENABLED = os.getenv('BOTTTSENABLED')
 BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL')
 
 #Reaction Monitor ENV Variables
-ID_ReactionMonitor = os.getenv('ID_ReactionMonitor')
+ID_Message_ReactionMonitor = os.getenv('ID_Message_ReactionMonitor')
 ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor')
+ID_Channel_ReactionMonitor = os.getenv('ID_Channel_ReactionMonitor')
 
 intents = discord.Intents(
     messages=True,
