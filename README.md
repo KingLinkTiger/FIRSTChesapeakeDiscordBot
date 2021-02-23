@@ -27,8 +27,8 @@ None
 ## COMMANDS
 Command | Description
 ---- | ----
-!frcteam TeamNumber | Retrieves information about the supplied team from the FIRST FRC API
-!ftcteam TeamNumber | Retrieves information about the supplied team from the FIRST FTC API
+!frcteam/frc TeamNumber | Retrieves information about the supplied team from the FIRST FRC API
+!ftcteam/ftc TeamNumber | Retrieves information about the supplied team from the FIRST FTC API
 !ftcteamtoa TeamNumber | Retrieves information about the supplied team from the The Orange Alliance API
 !ftc event start EventCode eventName | *ADMIN COMMAND* Starts the live event feed for the provided FTC Event Code
 !ftc event stop EventCode | *ADMIN COMMAND* Stops the live event feed for the provided FTC Event Code
@@ -48,3 +48,4 @@ Date | Description
 14FEB21 | v1.1.1 - Added argument to event start for the event name. This gets passed to the voice announcments.
 16FEB21 | v1.1.2 - Added ability to assign role to user when they react to a specific message.
 16FEB21 | v1.1.3 - Modifed react role. If user already had role remove it. If user is member of Auto Assigned role remove their reaction and do nothing.
+22FEB21 | v1.1.4 - Added aliases for frcteam and ftcteam commands.
