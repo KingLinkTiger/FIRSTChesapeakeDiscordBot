@@ -1,4 +1,5 @@
 #TODO: On container shutdown gracefully stop everything (Logging and websockets)
+#TODO: Add Text To Speech capability for live event feed
 
 import os, os.path
 from datetime import datetime, timedelta
@@ -164,7 +165,7 @@ async def getFTCTeamData(ctx, team_number: str):
     else:
         logger.warning(ctx.message.author.display_name + " tried to invoke bot from " + ctx.message.channel.name + ".")
 
-@bot.command(name='frcteam', aliases=['frc'])
+@bot.command(name='frcteam')
 async def getFRCTeamData(ctx, team_number: str):
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
         if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 4:
@@ -201,12 +202,9 @@ async def getFRCTeamData(ctx, team_number: str):
         logger.warning(ctx.message.author.display_name + " tried to invoke bot from " + ctx.message.channel.name + ".")
                 
 @bot.group(pass_context=True)
-async def ftc(ctx, team_number: str):
-    if team_number.isnumeric() and int(team_number) >= 0 and len(team_number) <= 5:
-        await ctx.invoke(bot.get_command('ftcteam'), team_number=team_number)
-    else:
-        if ctx.invoked_subcommand is None:
-            await ctx.send('Invalid command passed...')
+async def ftc(ctx):
+    if ctx.invoked_subcommand is None:
+        await ctx.send('Invalid command passed...')
 
 @ftc.group(pass_context=True)
 async def event(ctx):
