@@ -1,9 +1,9 @@
 # BUILD ENV
-FROM python:3.9.2-slim-buster
+FROM python:3.9.7-slim-buster
 
-LABEL version="1.1.5"
-LABEL description="Docker image of the FIRST Chesapeake Discord Bot."
-LABEL maintainer="kinglinktiger@gmail.com"
+LABEL version="2.0.0"
+LABEL description="Docker Image of the FIRST Chesapeake Discord Bot."
+LABEL maintainer="KingLinkTiger@gmail.com"
 
 # Install ffmpeg as part of image for TTS usage
 RUN apt-get update
@@ -23,7 +23,7 @@ RUN pip install -r requirements.txt
 COPY src/ .
 
 # Configure the volume for logging
-VOLUME ["/var/log/firstchesapeakebot"]
+VOLUME ["/var/log/firstchesapeakediscordbot"]
 
 # Command to run on container start
 CMD [ "python", "-u", "./bot.py" ]
