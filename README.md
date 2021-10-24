@@ -49,3 +49,4 @@ Date | Description
 16FEB21 | v1.1.2 - Added ability to assign role to user when they react to a specific message.
 16FEB21 | v1.1.3 - Modifed react role. If user already had role remove it. If user is member of Auto Assigned role remove their reaction and do nothing.
 22FEB21 | v1.1.4 - Added aliases for frcteam and ftcteam commands.
+24OCT21 | v2.0.0 - Updated bot to support 2022 FTC season.

@@ -484,7 +484,9 @@ def checkFTCEVENTSERVER_APIKey():
             #We received a reply from the server
             if response.status_code == 200:
                 responseData = json.loads(response.text)
-                if responseData["active"]:
+
+                #TEMP - Testing casting to bool
+                if bool(responseData["active"]):
                     logger.info("API Key is active")
                 else:
                     #Not a active API key
