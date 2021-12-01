@@ -370,6 +370,7 @@ async def server(ctx, verb: str, noun: str):
                     await ctx.send("ERROR: Failed to contact FTC Event Server!")
                 else:
                     #We received a reply from the server
+
                     if response.status_code == 200:
                         logger.info("Received API Key: " + responseData["key"])
                         await ctx.send("Received API Key: " + responseData["key"])
@@ -378,6 +379,36 @@ async def server(ctx, verb: str, noun: str):
                     else:
                         logger.warning("Invalid response from server.")
                         await ctx.send("ERROR: Invalid response from server.")
+            elif checkFTCEVENTSERVER_APIKey() == False:
+                #If the API key we have is invalid get a new one
+                logger.error("Supplied API Key does not exist. Requesting new API Key as it was explicity requested.")
+                logger.info("Requesting FTC Event Server API Key")
+
+                try:
+                    apiheaders = {'Content-Type':'application/json'}
+                    response = requests.post(FTCEVENTSERVER + "/api/v1/keyrequest/", data = {"name":"FIRSTChesapeakeDiscordBot"}, timeout=3)
+
+                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                    #Server is offline and needs to be handled
+                    logger.error("Failed to contact FTC Event Server!")
+                    await ctx.send("ERROR: Failed to contact FTC Event Server!")
+                except:
+                    logger.error("Unspecified Error!")
+                else:
+                    #We received a reply from the server
+                    logger.info("Received Response Code: " + response.status_code)
+
+                    responseData = json.loads(response.text)
+                    
+                    if response.status_code == 200:
+                        logger.info("Received API Key: " + responseData["key"])
+                        await ctx.send("Received API Key: " + responseData["key"])
+                    elif response.status_code == 400:
+                        logger.error("Must include name as a parameter when requesting API key.")
+                    else:
+                        logger.warning("Invalid response from server.")
+                        await ctx.send("ERROR: Invalid response from server.")
+                    
             else:
                 logger.warning("There is already an API key set for this application. Key: " + FTCEVENTSERVER_APIKey)
                 await ctx.send("ERROR: There is already an API key set for this application. Check logs for more information.")
@@ -488,13 +519,17 @@ def checkFTCEVENTSERVER_APIKey():
                 #TEMP - Testing casting to bool
                 if bool(responseData["active"]):
                     logger.info("API Key is active")
+                    return True
                 else:
                     #Not a active API key
                     logger.info("API Key is NOT active. Please activate it in the FTC Event Server.")
+                    return False
             elif response.status_code == 404:
                 logger.error("Supplied API Key does not exist. Please request one, update .env file, and restart the bot.")
+                return False
             else:
                 logger.warning("Invalid response from server.")
+                return False
     else:
         logger.error("FTC Event Server API Key is not set! Please request one, update .env file, and restart the bot.")
 
