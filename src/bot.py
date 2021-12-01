@@ -88,6 +88,13 @@ events = {}
 
 # ===== START COMMANDS SECTION =====
 
+#KLT - 30NOV21 2058 - Added Ping Command
+@bot.command(name="ping")
+async def ping(ctx):
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
+        await ctx.send("Pong")
+
 @bot.command(name='ftcteamtoa')
 async def getFTCTeamDataTOA(ctx, team_number: str):
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:

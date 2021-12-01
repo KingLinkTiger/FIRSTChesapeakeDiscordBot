@@ -51,3 +51,4 @@ Date | Description
 22FEB21 | v1.1.4 - Added aliases for frcteam and ftcteam commands.
 24OCT21 | v2.0.0 - Updated bot to support 2022 FTC season.
 30NOV21 | v2.1.0 - Updated bot to support Elimination Semi-Final and Finals matches. Fixed issue with TTS. Began improving get API key command.
+30NOV21 | v2.1.1 - Added Ping Command
