@@ -27,6 +27,7 @@ None
 ## COMMANDS
 Command | Description
 ---- | ----
+!ping | Ping/Pong command in order to validate the bot is online.
 !frcteam/frc TeamNumber | Retrieves information about the supplied team from the FIRST FRC API
 !ftcteam/ftc TeamNumber | Retrieves information about the supplied team from the FIRST FTC API
 !ftcteamtoa TeamNumber | Retrieves information about the supplied team from the The Orange Alliance API
@@ -52,3 +53,4 @@ Date | Description
 24OCT21 | v2.0.0 - Updated bot to support 2022 FTC season.
 30NOV21 | v2.1.0 - Updated bot to support Elimination Semi-Final and Finals matches. Fixed issue with TTS. Began improving get API key command.
 30NOV21 | v2.1.1 - Added Ping Command
+4DEC21 | v2.2.0 - Added inserting rankings to mySQL server on comit. Added Ping Command to README file.

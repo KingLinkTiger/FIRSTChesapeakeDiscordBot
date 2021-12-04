@@ -1,0 +1,125 @@
+
+#Get event from TOA 
+curl -X GET "https://theorangealliance.org/api/event/2122-MD-MCQ2/matches" -H "Content-Type: application/json" -H "X-TOA-KEY: 15a28a1e07e6dafe85b9af08c0dd8d487c4b4e8a833ba0e5cdd37b0a6f0f81b0" -H "X-Application-Origin: FIRSTChesapeakeDiscordBot"
+
+Get specific match from TOA
+curl -X GET "https://theorangealliance.org/api/match/2122-MD-MCQ2-Q001-1" -H "Content-Type: application/json" -H "X-TOA-KEY: 15a28a1e07e6dafe85b9af08c0dd8d487c4b4e8a833ba0e5cdd37b0a6f0f81b0" -H "X-Application-Origin: FIRSTChesapeakeDiscordBot"
+
+#Put Match data to TOA
+curl -X POST "https://theorangealliance.org/api/event/2122-MD-MCQ2" \
+-H "Content-Type: application/json" \
+-H "X-TOA-KEY: 15a28a1e07e6dafe85b9af08c0dd8d487c4b4e8a833ba0e5cdd37b0a6f0f81b0" \
+-H "X-Application-Origin: FIRSTChesapeakeDiscordBot" \
+--data '{"username":"xyz","password":"xyz"}'
+
+
+
+match_detail_key, match_key, red_min_pen, blue_min_pen, red_maj_pen, blue_maj_pen, PLUS any game-specific JSON variables defined in their specified class.
+Q1, 2122-MD-MCQ2-Q001-1, 2, 0, 0, 0,
+
+{"matchBrief":{"matchName":"SF2-1","matchNumber":2,"field":1,"red":{"seed":2,"captain":12518,"pick1":10442,"pick2":-1,"dq":false},"blue":{"seed":3,"captain":18792,"pick1":19994,"pick2":-1,"dq":false},"finished":true,"matchState":"COMMITTED","time":1638634463763},"startTime":1638634215613,"scheduledTime":-1,"resultPostedTime":1638634463763,"redScore":141,"blueScore":74,"red":{"minorPenalties":0,"majorPenalties":0,"barcodeElement1":"DUCK","barcodeElement2":"TEAM_SHIPPING_ELEMENT","carousel":false,"autoNavigated1":"COMPLETELY_IN_WAREHOUSE","autoNavigated2":"COMPLETELY_IN_WAREHOUSE","autoBonus1":false,"autoBonus2":false,"autoStorageFreight":0,"autoFreight1":0,"autoFreight2":0,"autoFreight3":1,"driverControlledStorageFreight":1,"driverControlledFreight1":0,"driverControlledFreight2":0,"driverControlledFreight3":5,"sharedFreight":6,"endgameDelivered":9,"allianceBalanced":false,"sharedUnbalanced":false,"endgameParked1":"NONE","endgameParked2":"COMPLETELY_IN_WAREHOUSE","capped":0,"carouselPoints":0,"autoNavigationPoints":20,"autoFreightPoints":6,"autoBonusPoints":0,"driverControlledAllianceHubPoints":30,"driverControlledSharedHubPoints":24,"driverControlledStoragePoints":1,"endgameDeliveryPoints":54,"allianceBalancedPoints":0,"sharedUnbalancedPoints":0,"endgameParkingPoints":6,"cappingPoints":0,"totalPoints":141,"auto":26,"teleop":55,"end":60,"penalty":0,"dq1":false,"dq2":false},"blue":{"minorPenalties":0,"majorPenalties":2,"barcodeElement1":"TEAM_SHIPPING_ELEMENT","barcodeElement2":"DUCK","carousel":true,"autoNavigated1":"COMPLETELY_IN_WAREHOUSE","autoNavigated2":"IN_STORAGE","autoBonus1":false,"autoBonus2":false,"autoStorageFreight":0,"autoFreight1":0,"autoFreight2":0,"autoFreight3":0,"driverControlledStorageFreight":0,"driverControlledFreight1":0,"driverControlledFreight2":0,"driverControlledFreight3":5,"sharedFreight":3,"endgameDelivered":8,"allianceBalanced":false,"sharedUnbalanced":false,"endgameParked1":"COMPLETELY_IN_WAREHOUSE","endgameParked2":"NONE","capped":1,"carouselPoints":10,"autoNavigationPoints":13,"autoFreightPoints":0,"autoBonusPoints":0,"driverControlledAllianceHubPoints":30,"driverControlledSharedHubPoints":12,"driverControlledStoragePoints":0,"endgameDeliveryPoints":48,"allianceBalancedPoints":0,"sharedUnbalancedPoints":0,"endgameParkingPoints":6,"cappingPoints":15,"totalPoints":74,"auto":23,"teleop":42,"end":69,"penalty":-60,"dq1":false,"dq2":false},"randomization":1}
+
+
+
+
+
+
+FreightFrenzyMatchDetails
+Name	Type
+match_detail_key	number
+match_key	number
+red_min_pen	number
+blue_min_pen	number
+red_maj_pen	number
+blue_maj_pen	number
+red	FreightFrenzyAllianceDetails
+blue	FreightFrenzyAllianceDetails
+
+FreightFrenzyAllianceDetails
+Name	Type
+barcode_element_1	FreightFrenzyBarcodeElement
+barcode_element_2	FreightFrenzyBarcodeElement
+carousel	boolean
+auto_navigated_1	FreightFrenzyParking
+auto_navigated_2	FreightFrenzyParking
+auto_nav_points	number
+auto_bonus_1	boolean
+auto_bonus_2	boolean
+auto_bonus_points	number
+auto_storage_freight	number
+auto_freight_1	number
+auto_freight_2	number
+auto_freight_3	number
+auto_freight_points	number
+tele_storage_freight	number
+tele_freight_1	number
+tele_freight_2	number
+tele_freight_3	number
+tele_alliance_hub_points	number
+tele_shared_hub_points	number
+tele_storage_points	number
+shared_freight	number
+end_delivered	number
+end_delivered_points	number
+alliance_balanced	boolean
+alliance_balanced_points	number
+shared_unbalanced	boolean
+shared_unbalanced_points	number
+end_parked_1	FreightFrenzyParking
+end_parked_2	FreightFrenzyParking
+end_parked_points	number
+capped	number
+capped_points	number
+carousel_points	number
+total_points	number
+FreightFrenzyInsights
+
+
+match_detail_key =Q1
+match_key=2122-MD-MCQ2-Q001-1
+red_min_pen=
+blue_min_pen=
+red_maj_pen=
+blue_maj_pen=
+red 
+barcode_element_1	FreightFrenzyBarcodeElement
+barcode_element_2	FreightFrenzyBarcodeElement
+carousel	boolean
+auto_navigated_1	FreightFrenzyParking
+auto_navigated_2	FreightFrenzyParking
+auto_nav_points	number
+auto_bonus_1	boolean
+auto_bonus_2	boolean
+auto_bonus_points	number
+auto_storage_freight	number
+auto_freight_1	number
+auto_freight_2	number
+auto_freight_3	number
+auto_freight_points	number
+tele_storage_freight	number
+tele_freight_1	number
+tele_freight_2	number
+tele_freight_3	number
+tele_alliance_hub_points	number
+tele_shared_hub_points	number
+tele_storage_points	number
+shared_freight	number
+end_delivered	number
+end_delivered_points	number
+alliance_balanced	boolean
+alliance_balanced_points	number
+shared_unbalanced	boolean
+shared_unbalanced_points	number
+end_parked_1	FreightFrenzyParking
+end_parked_2	FreightFrenzyParking
+end_parked_points	number
+capped	number
+capped_points	number
+carousel_points	number
+total_points	number
+FreightFrenzyInsights
+}
+
+blue
+
+

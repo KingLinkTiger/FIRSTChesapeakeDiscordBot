@@ -37,6 +37,7 @@ mySQL_HOST = os.getenv('mySQL_HOST')
 mySQL_DATABASE = os.getenv('mySQL_DATABASE')
 mySQL_TABLE = os.getenv('mySQL_TABLE')
 
+mySQL_RANKINGTABLE = os.getenv('mySQL_RANKINGTABLE')
 
 class FTCEvent:
     logger = logging.getLogger('FIRSTChesapeakeBot')
@@ -160,6 +161,7 @@ class FTCEvent:
         except mysql.connector.Error as err:
             self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to connect to SQL Database.")
             self.logger.error("[" + self.name + "][mySQL] " + err.msg)
+
         #Check if the match already exists in the DB
         SQLStatement = "SELECT EXISTS(SELECT * FROM {table_name} WHERE `eventCode` = %s AND `matchBrief_matchName` = %s)".format(table_name=mySQL_TABLE)
         SQLData = (self.eventCode, matchResults["matchBrief"]["matchName"])
@@ -171,8 +173,6 @@ class FTCEvent:
             self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to INSERT into the SQL Database.")
             self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
             self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
-
-        
 
         #If the match has already been committed previously we must update the row already there
         if bool(result[0][0]):
@@ -212,6 +212,133 @@ class FTCEvent:
             self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
             self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
         
+        #region Post/Update the Rankings
+        if json_data["payload"]["shortName"][0] == 'Q': #Only update the Rankings during Qualification Matches
+            if mySQL_RANKINGTABLE != "":
+                #Clear the cache for this URL in order to get fresh data every time
+                with requests_cache.disabled():
+                    response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/rankings/", headers=apiheaders)
+
+                self.logger.info("Ranking raw Response Data: " + response.text)
+
+                rankingResults = json.loads(response.text)
+
+                #Check if the match already exists in the DB
+                SQLStatement = "DELETE FROM {table_name} WHERE `eventCode` = %s".format(table_name=mySQL_RANKINGTABLE)
+                SQLData = (self.eventCode,)
+
+                try:
+                    self.mySQLCursor.execute(SQLStatement, SQLData)
+                    self.mySQLConnection.commit()
+                except mysql.connector.Error as err:
+                    self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to run DELETE RANKING SQL Command.")
+                    self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
+                    self.logger.error("[" + self.name + "][mySQL] Supplied Values: %s" % (SQLData,))
+
+                #SQL to INSERT NEW Rankings
+                for team in rankingResults["rankingList"]:
+
+                    #INSERT INTO `2022eventRankings` (`eventCode`, `team`, `teamName`, `ranking`, `leagueRanking`, `rankingPoints`, `tbp1`, `tbp2`, `matchesPlayed`, `highestScore`, `wins`, `losses`, `ties`) VALUES ('uschscoq1', '12518', 'Almond Robotics', '1', '0', '294', '86', '104', '3', '117', '2', '1', '0');
+                    SQLStatement = "INSERT INTO {table_name} (`eventCode`, `team`, `teamName`, `ranking`, `leagueRanking`, `rankingPoints`, `tbp1`, `tbp2`, `matchesPlayed`, `highestScore`, `wins`, `losses`, `ties`) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);".format(table_name=mySQL_RANKINGTABLE)
+                            
+                    SQLData = (self.eventCode, team["team"], team["teamName"], team["ranking"], team["leagueRanking"], team["rankingPoints"], team["tbp1"], team["tbp2"], team["matchesPlayed"], team["highestScore"], team["wins"], team["losses"], team["ties"])
+
+                    try:
+                        self.mySQLCursor.execute(SQLStatement, SQLData)
+                        self.mySQLConnection.commit()
+                    except mysql.connector.Error as err:
+                        self.logger.error("[" + self.name + "][mySQL] " + "ERROR when trying to INSERT into the SQL Database.")
+                        self.logger.error("[" + self.name + "][mySQL] " + "Something went wrong: {}".format(err))
+                        self.logger.error("[" + self.name + "][mySQL] %s" % (SQLData,))
+        #endregion Post/Update the Rankings
+
+        #region Upload data to TOA
+        #/:event_key/matches/details	Uploads match details for the given event.
+        
+        # TOADATA = {
+        # "match_detail_key": "Q1",
+        # "match_key": "2122-MD-MCQ2-Q001-1",
+        # "red_min_pen": matchResults["red"]["minorPenalties"],
+        # "blue_min_pen": matchResults["blue"]["minorPenalties"],
+        # "red_maj_pen": matchResults["red"]["majorPenalties"],
+        # "blue_maj_pen": matchResults["blue"]["majorPenalties"],
+        # "red": {
+        #     "barcode_element_1": matchResults["red"]["barcodeElement1"],
+        #     "barcode_element_2": matchResults["red"]["barcodeElement2"],
+        #     "carousel": matchResults["red"]["carousel"],
+        #     "auto_navigated_1": matchResults["red"]["autoNavigated1"],
+        #     "auto_navigated_2": matchResults["red"]["autoNavigated2"],
+        #     "auto_nav_points": matchResults["red"]["autoNavigationPoints"],
+        #     "auto_bonus_1": matchResults["red"]["autoBonus1"],
+        #     "auto_bonus_2": matchResults["red"]["autoBonus2"],
+        #     "auto_bonus_points": matchResults["red"]["autoBonusPoints"],
+        #     "auto_storage_freight": matchResults["red"]["autoStorageFreight"],
+        #     "auto_freight_1": matchResults["red"]["autoFreight1"],
+        #     "auto_freight_2": matchResults["red"]["autoFreight2"],
+        #     "auto_freight_3": matchResults["red"]["autoFreight3"],
+        #     "auto_freight_points": matchResults["red"]["autoFreightPoints"],
+        #     "tele_storage_freight": matchResults["red"]["driverControlledStorageFreight"],
+        #     "tele_freight_1": matchResults["red"]["driverControlledFreight1"],
+        #     "tele_freight_2": matchResults["red"]["driverControlledFreight2"],
+        #     "tele_freight_3": matchResults["red"]["driverControlledFreight3"],
+        #     "tele_alliance_hub_points": matchResults["red"]["driverControlledAllianceHubPoints"],
+        #     "tele_shared_hub_points": matchResults["red"]["driverControlledSharedHubPoints"],
+        #     "tele_storage_points": matchResults["red"]["driverControlledStoragePoints"],
+        #     "shared_freight": matchResults["red"]["sharedFreight"],
+        #     "end_delivered": matchResults["red"]["endgameDelivered"],
+        #     "end_delivered_points": matchResults["red"]["endgameDeliveryPoints"],
+        #     "alliance_balanced": matchResults["red"]["allianceBalanced"],
+        #     "alliance_balanced_points": matchResults["red"]["allianceBalancedPoints"],
+        #     "shared_unbalanced": matchResults["red"]["sharedUnbalanced"],
+        #     "shared_unbalanced_points": matchResults["red"]["sharedUnbalancedPoints"],
+        #     "end_parked_1": matchResults["red"]["endgameParked1"],
+        #     "end_parked_2": matchResults["red"]["endgameParked2"],
+        #     "end_parked_points": matchResults["red"]["endgameParkingPoints"],
+        #     "capped": matchResults["red"]["capped"],
+        #     "capped_points": matchResults["red"]["cappingPoints"],
+        #     "carousel_points": matchResults["red"]["carouselPoints"],
+        #     "total_points": matchResults["red"]["totalPoints"],
+        # },
+        # "blue": {
+        #     "barcode_element_1": matchResults["blue"]["barcodeElement1"],
+        #     "barcode_element_2": matchResults["blue"]["barcodeElement2"],
+        #     "carousel": matchResults["blue"]["carousel"],
+        #     "auto_navigated_1": matchResults["blue"]["autoNavigated1"],
+        #     "auto_navigated_2": matchResults["blue"]["autoNavigated2"],
+        #     "auto_nav_points": matchResults["blue"]["autoNavigationPoints"],
+        #     "auto_bonus_1": matchResults["blue"]["autoBonus1"],
+        #     "auto_bonus_2": matchResults["blue"]["autoBonus2"],
+        #     "auto_bonus_points": matchResults["blue"]["autoBonusPoints"],
+        #     "auto_storage_freight": matchResults["blue"]["autoStorageFreight"],
+        #     "auto_freight_1": matchResults["blue"]["autoFreight1"],
+        #     "auto_freight_2": matchResults["blue"]["autoFreight2"],
+        #     "auto_freight_3": matchResults["blue"]["autoFreight3"],
+        #     "auto_freight_points": matchResults["blue"]["autoFreightPoints"],
+        #     "tele_storage_freight": matchResults["blue"]["driverControlledStorageFreight"],
+        #     "tele_freight_1": matchResults["blue"]["driverControlledFreight1"],
+        #     "tele_freight_2": matchResults["blue"]["driverControlledFreight2"],
+        #     "tele_freight_3": matchResults["blue"]["driverControlledFreight3"],
+        #     "tele_alliance_hub_points": matchResults["blue"]["driverControlledAllianceHubPoints"],
+        #     "tele_shared_hub_points": matchResults["blue"]["driverControlledSharedHubPoints"],
+        #     "tele_storage_points": matchResults["blue"]["driverControlledStoragePoints"],
+        #     "shared_freight": matchResults["blue"]["sharedFreight"],
+        #     "end_delivered": matchResults["blue"]["endgameDelivered"],
+        #     "end_delivered_points": matchResults["blue"]["endgameDeliveryPoints"],
+        #     "alliance_balanced": matchResults["blue"]["allianceBalanced"],
+        #     "alliance_balanced_points": matchResults["blue"]["allianceBalancedPoints"],
+        #     "shared_unbalanced": matchResults["blue"]["sharedUnbalanced"],
+        #     "shared_unbalanced_points": matchResults["blue"]["sharedUnbalancedPoints"],
+        #     "end_parked_1": matchResults["blue"]["endgameParked1"],
+        #     "end_parked_2": matchResults["blue"]["endgameParked2"],
+        #     "end_parked_points": matchResults["blue"]["endgameParkingPoints"],
+        #     "capped": matchResults["blue"]["capped"],
+        #     "capped_points": matchResults["blue"]["cappingPoints"],
+        #     "carousel_points": matchResults["blue"]["carouselPoints"],
+        #     "total_points": matchResults["blue"]["totalPoints"],
+        # }
+        # }
+        #endregion
+
         #Cleanly close the cursor and connection once complete
         self.mySQLCursor.close()
         self.mySQLConnection.close()
@@ -295,7 +422,7 @@ class FTCEvent:
     async def sendTTS(self, message):
         if BOTTTSENABLED == 'True':
             if not self.bot.voice_clients == None:
-                self.logger.debug("[sendTTS] " + "Trying to play sound file.")
+                self.logger.debug("[" + self.name + "][sendTTS] " + "Trying to play sound file.")
                 #Temp Commented out
                 tts = gTTS(message, lang='en')
                 tts.save('output.mp3')
@@ -306,4 +433,4 @@ class FTCEvent:
                 
                 source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3', options="-loglevel panic"), volume=2.0)
                 for vc in self.bot.voice_clients:
-                    vc.play(source, after=lambda e: self.logger.error('[sendTTS] Player error: %s' % e) if e else self.logger.info("[sendTTS] " + "Finished playing audio"))
+                    vc.play(source, after=lambda e: self.logger.error("[" + self.name + "][sendTTS] Player error: %s" % e) if e else self.logger.info("[" + self.name + "][sendTTS] " + "Finished playing audio"))
