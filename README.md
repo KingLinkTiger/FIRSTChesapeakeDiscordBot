@@ -54,3 +54,4 @@ Date | Description
 30NOV21 | v2.1.0 - Updated bot to support Elimination Semi-Final and Finals matches. Fixed issue with TTS. Began improving get API key command.
 30NOV21 | v2.1.1 - Added Ping Command
 4DEC21 | v2.2.0 - Added inserting rankings to mySQL server on comit. Added Ping Command to README file.
+11DEC21 | v2.2.1 - Added logging for websocket and FTCTeam Instances.

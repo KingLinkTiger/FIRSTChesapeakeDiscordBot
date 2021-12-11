@@ -60,37 +60,55 @@ class FTCEvent:
 
         self.task = asyncio.create_task(self.startWebSocket())
 
+    def processTeams(self, compeatingTeams):
+        #Get team details for each team
+        self.teams = {}
+        for team in compeatingTeams["teamNumbers"]:            
+            self.logger.info("[" + self.name + "][processTeams][" + str(team)+ "] " + "Sending request for team: " + str(team))
+
+            try:
+                apiheaders = {'accept':'application/json', 'Authorization':FTCEVENTSERVER_APIKey}
+                url = FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/teams/" + str(team)
+                self.logger.info(url)
+                response = requests.get(url, headers=apiheaders)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                #Server is offline and needs to be handled
+                self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Failed to contact FTC Event Server!")
+            else:
+                #We received a reply from the server
+                if response.status_code == 200:
+                    teamResponseData = json.loads(response.text)
+                    self.teams[team] = FTCTeam(teamResponseData)
+                elif response.status_code == 400:
+                    self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Must include name as a parameter when requesting API key.")
+                elif response.status_code == 404:
+                    self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Requested URL was not found")
+                else:
+                    self.logger.warning(response.status_code)
+                    self.logger.warning("[" + self.name + "][processTeams][" + str(team)+ "] " + "Invalid response from server.")  
         
     def getTeams(self):
-        self.logger.info("[" + self.name + "] " + "Getting teams data")
+        self.logger.info("[" + self.name + "][getTeams] " + "Getting teams data")
         if not hasattr(self, "teams"):
-            self.logger.info("[" + self.name + "] " + "Teams attribute does not exist making it")
-            self.teams = {}
-            
-            #Get the API calls to get the teams information
-            #Get list of compeating teams GetCompetingTeams
-            
-            apiheaders = {'Content-Type':'application/json', 'Authorization':FTCEVENTSERVER_APIKey}
-            
-            response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/teams/", headers=apiheaders)
-            
-            responseData = json.loads(response.text)
-            
-            #print("Competing Team List Received Status Code: " + str(response.status_code))
-            
-            #print(response.text)
-            
-            #Get team details for each team
-            for team in responseData["teamNumbers"]:              
-                self.logger.info("[" + self.name + "] " + "Sending request for team: " + str(team))
-                
-                teamResponse = requests.get(FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/teams/" + str(team), headers=apiheaders)
-                
-                #print("Received Status Code: " + str(teamResponse.status_code))
-            
-                teamResponseData = json.loads(teamResponse.text)
-
-                self.teams[team] = FTCTeam(teamResponseData)
+            try:
+                apiheaders = {'accept':'application/json', 'Authorization':FTCEVENTSERVER_APIKey}
+                url = FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/teams/"
+                self.logger.info(url)
+                response = requests.get(url, headers=apiheaders)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                #Server is offline and needs to be handled
+                self.logger.error("[" + self.name + "][getTeams] " + "Failed to contact FTC Event Server!")
+            else:
+                #We received a reply from the server
+                if response.status_code == 200:
+                    self.processTeams(json.loads(response.text))
+                elif response.status_code == 400:
+                    self.logger.error("[" + self.name + "][getTeams] " + "Must include name as a parameter when requesting API key.")
+                elif response.status_code == 404:
+                    self.logger.error("[" + self.name + "][getTeams] " + "Requested URL was not found")
+                else:
+                    self.logger.warning(response.status_code)
+                    self.logger.warning("[" + self.name + "][getTeams] " + "Invalid response from server.")
      
     # FTC SCOREKEEPER WEBSOCKET FUNCTIONS
 
@@ -359,11 +377,11 @@ class FTCEvent:
         #await ctx.add_reaction('🚨')
     
     async def startWebSocket(self):
-        self.logger.info("[" + self.name + "] " + "Starting Websocket")
+        self.logger.info("[" + self.name + "][Websocket] " + "Starting Websocket")
         uri = FTCEVENTSERVER_WEBSOCKETURL + "/api/v2/stream/?code=" + self.eventCode
-        self.logger.debug("[" + self.name + "] Atempting WebSocket connection to the following URL: " + uri)
+        self.logger.debug("[" + self.name + "][Websocket] " + "Atempting WebSocket connection to the following URL: " + uri)
         async with websockets.connect(uri) as websocket:
-            self.logger.info("[" + self.name + "] " + "Monitoring Event: " + self.name)
+            self.logger.info("[" + self.name + "][Websocket] " + "Monitoring Event: " + self.name)
             await self.sendAdmin("Monitoring Event: " + self.name)
             while True:
                 try:
@@ -373,7 +391,7 @@ class FTCEvent:
                     #Parse the response into JSON
                     json_data = json.loads(response)
                     
-                    self.logger.info("Raw Data received from websocket: " + response)
+                    self.logger.info("[" + self.name + "][Websocket] " + "Raw Data received from websocket: " + response)
 
                     #Extract the updateType from the response
                     updateType = json_data["updateType"]               
@@ -401,6 +419,10 @@ class FTCEvent:
                 except asyncio.CancelledError:
                     await websocket.close()
                     raise
+                except Exception as err:
+                    self.logger.error("[" + self.name + "][Websocket] " + "ERROR when trying to INSERT into the SQL Database.")
+                    self.logger.error("[" + self.name + "][Websocket] " + "Something went wrong: {}".format(err))
+                    self.logger.error("[" + self.name + "][Websocket] %s" % (err,))
                 
     async def stopWebSocket(self):
         self.logger.info("[" + self.name + "] " + "Stopped Monitoring Event: " + self.name)
