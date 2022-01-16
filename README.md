@@ -55,3 +55,9 @@ Date | Description
 30NOV21 | v2.1.1 - Added Ping Command
 4DEC21 | v2.2.0 - Added inserting rankings to mySQL server on comit. Added Ping Command to README file.
 11DEC21 | v2.2.1 - Added logging for websocket and FTCTeam Instances.
+11DEC21 | v2.2.2 - Added loging to avoid rate limiting.
+11DEC21 | v2.2.3 - Added ability to stop all monitored events at once.
+15JAN22 | v2.3.0 - Updated for 2022 FRC Season and v3 API. Added error handling to SendTTS function.
+15JAN22 | v2.3.1 - Updated requirements to latest
+16JAN22 | v2.3.2 - Fixed issues. Updated testBuild.sh.
+16JAN22 | v2.3.3 - Added counter to display progress when adding an event.

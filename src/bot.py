@@ -180,7 +180,7 @@ async def getFRCTeamData(ctx, team_number: str):
             
             try:
                 apiheaders = {'Accept':'application/json', 'Authorization':'Basic '+FRCEVENTS_KEY}
-                response = requests.get('https://frc-api.firstinspires.org/v2.0/2020/teams?teamNumber='+team_number, headers=apiheaders, timeout=3)
+                response = requests.get('https://frc-api.firstinspires.org/v3.0/2022/teams?teamNumber='+team_number, headers=apiheaders, timeout=3) #v2.3.0 - Updated for 2022 FRC Season and v3 API
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
                 #Server is offline and needs to be handled
                 logger.error("Failed to contact FIRST FRC API!")
@@ -212,16 +212,19 @@ async def getFRCTeamData(ctx, team_number: str):
 async def ftc(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Invalid command passed...')
+        logger.info("[ftc] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
 
 @ftc.group(pass_context=True)
 async def event(ctx):
     if ctx.invoked_subcommand is event:
         await ctx.send('Invalid sub command passed...')  
+        logger.info("[ftc][event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
 
 @event.command(name='add', aliases=['start'])
 async def addEvent(ctx, eventCode, eventName):
+    logger.info("[ftc][event][add] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
-        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        logger.info("[ftc][event][add] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         #If the event code is NOT already in the events DICT
         if not eventCode in events:
@@ -247,6 +250,9 @@ async def addEvent(ctx, eventCode, eventName):
                     
                     #Create FTCEvent instance
                     logger.info("[ftc event] Attempting to make FTCEvent Instance")
+
+                    await ctx.message.add_reaction('⚠')
+
                     #e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
                     e = FTCEvent(responseData, bot, DiscordChannel.AllDiscordChannels.copy(), eventName)
                     
@@ -254,6 +260,7 @@ async def addEvent(ctx, eventCode, eventName):
                     events[eventCode] = e
 
                     #Add reaction to message to let user know it was created successfully
+                    await ctx.message.remove_reaction('⚠', ctx.message.author)
                     await ctx.message.add_reaction('✅')
 
                 else:
@@ -269,19 +276,30 @@ async def addEvent(ctx, eventCode, eventName):
 async def removeEvent(ctx, eventCode):
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        logger.info("[ftc event] " + ctx.message.author.display_name + " is trying to stop the following event code: " + eventCode)
 
-        if eventCode in events:
-            await events[eventCode].stopWebSocket()
-            del events[eventCode]
-            await ctx.message.add_reaction('🛑')
-            
-            #If this is the last event we were monitoring disconnect voice
-            if len(events) == 0 and BOTTTSENABLED:
-                await voiceStop()
-            
+        if eventCode.lower() == "all".lower():
+            for event in events:
+                await event.stopWebSocket()
+                del event
+                await ctx.message.add_reaction('🛑')
+                
+                #If this is the last event we were monitoring disconnect voice
+                if len(events) == 0 and BOTTTSENABLED:
+                    await voiceStop()
         else:
-            logger.error("Unable to remove event! Event code was not being monitored by system: " + eventCode + ".")
-            await ctx.send("ERROR: System is not monitoring event " + eventCode)
+            if eventCode in events:
+                await events[eventCode].stopWebSocket()
+                del events[eventCode]
+                await ctx.message.add_reaction('🛑')
+                
+                #If this is the last event we were monitoring disconnect voice
+                if len(events) == 0 and BOTTTSENABLED:
+                    await voiceStop()
+                    
+            else:
+                logger.error("Unable to remove event! Event code was not being monitored by system: " + eventCode + ".")
+                await ctx.send("ERROR: System is not monitoring event " + eventCode)
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
 

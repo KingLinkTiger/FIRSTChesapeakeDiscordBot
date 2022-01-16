@@ -12,4 +12,4 @@ class FTCTeam:
         self.rookie = teamData["rookie"]
         
         self.logger = logging.getLogger('FIRSTChesapeakeBot')
-        self.logger.info("[" + str(self.number) + "] " + "Creating Team Instance")
+        self.logger.info("[FTCTeam][" + str(self.number) + "] " + "Creating Team Instance")

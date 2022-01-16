@@ -1,5 +1,12 @@
 import os
 from datetime import datetime, timedelta
+
+#region Required for Random sleep to avoid rate limiting
+from random import randint
+import time
+#endregion
+
+
 import requests
 import requests_cache
 import json
@@ -63,13 +70,14 @@ class FTCEvent:
     def processTeams(self, compeatingTeams):
         #Get team details for each team
         self.teams = {}
-        for team in compeatingTeams["teamNumbers"]:            
-            self.logger.info("[" + self.name + "][processTeams][" + str(team)+ "] " + "Sending request for team: " + str(team))
+        #for team in compeatingTeams["teamNumbers"]:
+        for idx,team in enumerate(compeatingTeams["teamNumbers"]):
+            self.logger.info("[" + self.name + "][processTeams][" + str(team)+ "]["+idx+"/"+len(compeatingTeams["teamNumbers"])+"] " + "Sending request for team: " + str(team))
 
             try:
                 apiheaders = {'accept':'application/json', 'Authorization':FTCEVENTSERVER_APIKey}
                 url = FTCEVENTSERVER + "/api/v1/events/" + self.eventCode + "/teams/" + str(team)
-                self.logger.info(url)
+                #self.logger.info(url)
                 response = requests.get(url, headers=apiheaders)
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
                 #Server is offline and needs to be handled
@@ -83,9 +91,14 @@ class FTCEvent:
                     self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Must include name as a parameter when requesting API key.")
                 elif response.status_code == 404:
                     self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Requested URL was not found")
+                elif response.status_code == 429:
+                    self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Rquest has been rate limited!")
                 else:
                     self.logger.warning(response.status_code)
-                    self.logger.warning("[" + self.name + "][processTeams][" + str(team)+ "] " + "Invalid response from server.")  
+                    self.logger.warning("[" + self.name + "][processTeams][" + str(team)+ "] " + "Invalid response from server.")
+
+            #Sleep for anywhere between 1 and 3 seconds so we do not get rate limited
+            time.sleep(randint(1,3))
         
     def getTeams(self):
         self.logger.info("[" + self.name + "][getTeams] " + "Getting teams data")
@@ -106,6 +119,8 @@ class FTCEvent:
                     self.logger.error("[" + self.name + "][getTeams] " + "Must include name as a parameter when requesting API key.")
                 elif response.status_code == 404:
                     self.logger.error("[" + self.name + "][getTeams] " + "Requested URL was not found")
+                elif response.status_code == 429:
+                    self.logger.error("[" + self.name + "][processTeams][" + str(team)+ "] " + "Rquest has been rate limited!")
                 else:
                     self.logger.warning(response.status_code)
                     self.logger.warning("[" + self.name + "][getTeams] " + "Invalid response from server.")
@@ -371,7 +386,7 @@ class FTCEvent:
         
     async def matchAbort(self, json_data):     
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH ABORTED!!!" + """```""")
-        await self.sendTTS("Warning " + self.eventName + " has aborted")
+        await self.sendTTS("Warning! " + self.eventName + " has aborted")
         #TODO: Fix reactions. This is broken because my custom functions do not return a CTX
         #await ctx.add_reaction('⚠')
         #await ctx.add_reaction('🚨')
@@ -445,7 +460,6 @@ class FTCEvent:
         if BOTTTSENABLED == 'True':
             if not self.bot.voice_clients == None:
                 self.logger.debug("[" + self.name + "][sendTTS] " + "Trying to play sound file.")
-                #Temp Commented out
                 tts = gTTS(message, lang='en')
                 tts.save('output.mp3')
                 
@@ -453,6 +467,27 @@ class FTCEvent:
                 #mp3_fp = BytesIO()
                 #tts.write_to_fp(mp3_fp)
                 
-                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3', options="-loglevel panic"), volume=2.0)
+                #15JAN22 - Temp removed loglevel option in order to get verbose logs from ffmpeg
+                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'), volume=2.0)
+                #source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3', options="-loglevel panic"), volume=2.0)
+
+                #15JAN22 - Updated code to handle errors.
                 for vc in self.bot.voice_clients:
-                    vc.play(source, after=lambda e: self.logger.error("[" + self.name + "][sendTTS] Player error: %s" % e) if e else self.logger.info("[" + self.name + "][sendTTS] " + "Finished playing audio"))
+                    try:
+                        # Lets play that mp3 file in the voice channel
+                        vc.play(source)
+                        self.logger.info("[" + self.name + "][sendTTS] " + "Finished playing audio")
+                    # Handle the exceptions that can occur
+                    except ClientException as e:
+                        self.logger.info("[" + self.name + "][sendTTS] " + "A client exception occured: " + e)
+                    except TypeError as e:
+                        self.logger.info("[" + self.name + "][sendTTS] " + "TypeError exception: " + e)
+                    except OpusNotLoaded as e:
+                        self.logger.info("[" + self.name + "][sendTTS] " + "OpusNotLoaded exception: " + e)
+                    except Exception as err:
+                        self.logger.error("[" + self.name + "][sendTTS] " + "ERROR when trying to send TTS to channel .")
+                        self.logger.error("[" + self.name + "][sendTTS] " + "Something went wrong: {}".format(err))
+                        self.logger.error("[" + self.name + "][sendTTS] %s" % (err,))
+
+                    # Original Code on next line
+                    # vc.play(source, after=lambda e: self.logger.error("[" + self.name + "][sendTTS] Player error: %s" % e) if e else self.logger.info("[" + self.name + "][sendTTS] " + "Finished playing audio"))
