@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 #region Required for Random sleep to avoid rate limiting
-from random import randint
+from random import uniform
 import time
 #endregion
 
@@ -27,6 +27,9 @@ from DiscordChannel import DiscordChannel
 #For TTS
 from gtts import gTTS
 from io import BytesIO
+
+#For fixing voice
+from FFmpegPCMAudioGTTS import FFmpegPCMAudioGTTS
 
 load_dotenv()
 
@@ -70,9 +73,9 @@ class FTCEvent:
     def processTeams(self, compeatingTeams):
         #Get team details for each team
         self.teams = {}
-        #for team in compeatingTeams["teamNumbers"]:
-        for idx,team in enumerate(compeatingTeams["teamNumbers"]):
-            self.logger.info("[" + self.name + "][processTeams][" + str(team)+ "]["+idx+"/"+len(compeatingTeams["teamNumbers"])+"] " + "Sending request for team: " + str(team))
+        #for idx,team in enumerate(compeatingTeams["teamNumbers"]):
+        for team in compeatingTeams["teamNumbers"]:
+            self.logger.info("[" + self.name + "][processTeams][" + str(team)+ "] " + "Sending request for team: " + str(team))
 
             try:
                 apiheaders = {'accept':'application/json', 'Authorization':FTCEVENTSERVER_APIKey}
@@ -97,8 +100,8 @@ class FTCEvent:
                     self.logger.warning(response.status_code)
                     self.logger.warning("[" + self.name + "][processTeams][" + str(team)+ "] " + "Invalid response from server.")
 
-            #Sleep for anywhere between 1 and 3 seconds so we do not get rate limited
-            time.sleep(randint(1,3))
+            #Sleep for a random float between 0 and 3 seconds
+            time.sleep(uniform(0,3))
         
     def getTeams(self):
         self.logger.info("[" + self.name + "][getTeams] " + "Getting teams data")
@@ -114,6 +117,7 @@ class FTCEvent:
             else:
                 #We received a reply from the server
                 if response.status_code == 200:
+                    self.logger.info("[" + self.name + "][getTeams] " + "Data received from server!")
                     self.processTeams(json.loads(response.text))
                 elif response.status_code == 400:
                     self.logger.error("[" + self.name + "][getTeams] " + "Must include name as a parameter when requesting API key.")
@@ -459,31 +463,58 @@ class FTCEvent:
     async def sendTTS(self, message):
         if BOTTTSENABLED == 'True':
             if not self.bot.voice_clients == None:
-                self.logger.debug("[" + self.name + "][sendTTS] " + "Trying to play sound file.")
-                tts = gTTS(message, lang='en')
-                tts.save('output.mp3')
+                self.logger.debug("[" + self.name + "][sendTTS] " + "Trying to play TTS: " + message)
+                #sound = gTTS(text=message, lang="en", slow=False)
+                #sound_fp = BytesIO()
+                #sound.write_to_fp(sound_fp)
+
+                fp = BytesIO()
+                gTTS(message).write_to_fp(fp)
+                fp.seek(0)
+
+                #tts = gTTS(message, lang='en')
+                #tts.save('output.mp3')
                 
                 #TODO Write the data to a data blob and just read it from there
                 #mp3_fp = BytesIO()
                 #tts.write_to_fp(mp3_fp)
                 
                 #15JAN22 - Temp removed loglevel option in order to get verbose logs from ffmpeg
-                source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'), volume=2.0)
+                #source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'), volume=2.0)
                 #source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3', options="-loglevel panic"), volume=2.0)
+                
+                #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
+                #source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio('output.mp3'))
 
                 #15JAN22 - Updated code to handle errors.
                 for vc in self.bot.voice_clients:
+
+                    #22JAN22 - Set output volume to 100% just in case. 
+                    #vc.source.volume = 1.0
+
+                    if vc.is_playing():
+                        self.logger.info("[" + self.name + "][sendTTS] " + "Sound is already playing. Stopping.")
+                        vc.stop()
+
                     try:
+                        #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
+                        #https://stackoverflow.com/questions/68123040/discord-py-play-gtts-without-saving-the-audio-file
+                        #https://github.com/Rapptz/discord.py/pull/5855
+                        self.logger.debug("[" + self.name + "][sendTTS] " + "Try Block")
+                        vc.play(FFmpegPCMAudioGTTS(fp.read(), pipe=True))
+                        #vc.play(discord.FFmpegPCMAudio(sound_fp.read(), pipe=True), after=lambda e: self.logger.error("[" + self.name + "][sendTTS] " + "Something went wrong: {}".format(err)) if e else None)
+                        #vc.play(FFmpegPCMAudioGTTS(sound_fp.read(), pipe=True), after=print("Done"))
+                        #vc.play(source, after=lambda e: self.logger.error("[" + self.name + "][sendTTS] " + "Something went wrong: {}".format(err)) if e else None)
                         # Lets play that mp3 file in the voice channel
-                        vc.play(source)
+                        #vc.play(source)
                         self.logger.info("[" + self.name + "][sendTTS] " + "Finished playing audio")
                     # Handle the exceptions that can occur
-                    except ClientException as e:
-                        self.logger.info("[" + self.name + "][sendTTS] " + "A client exception occured: " + e)
-                    except TypeError as e:
-                        self.logger.info("[" + self.name + "][sendTTS] " + "TypeError exception: " + e)
-                    except OpusNotLoaded as e:
-                        self.logger.info("[" + self.name + "][sendTTS] " + "OpusNotLoaded exception: " + e)
+                    #except ClientException as e:
+                    #    self.logger.info("[" + self.name + "][sendTTS] " + "A client exception occured: " + e)
+                    #except TypeError as e:
+                    #    self.logger.info("[" + self.name + "][sendTTS] " + "TypeError exception: " + e)
+                    #except OpusNotLoaded as e:
+                    #    self.logger.info("[" + self.name + "][sendTTS] " + "OpusNotLoaded exception: " + e)
                     except Exception as err:
                         self.logger.error("[" + self.name + "][sendTTS] " + "ERROR when trying to send TTS to channel .")
                         self.logger.error("[" + self.name + "][sendTTS] " + "Something went wrong: {}".format(err))

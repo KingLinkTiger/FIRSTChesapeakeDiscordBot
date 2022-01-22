@@ -61,3 +61,6 @@ Date | Description
 15JAN22 | v2.3.1 - Updated requirements to latest
 16JAN22 | v2.3.2 - Fixed issues. Updated testBuild.sh.
 16JAN22 | v2.3.3 - Added counter to display progress when adding an event.
+22JAN22 | v2.3.4 - Troubleshooting Voice issues.
+22JAN22 | v2.3.5 - Added FTC Event GET command to report what events are currently being monitored.
+22JAN22 | v2.3.6 - Fixed Voice issues by utilizing FFmpegPCMAudioGTTS. Updated requirements.txt

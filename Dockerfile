@@ -1,7 +1,7 @@
 # BUILD ENV
-FROM python:3.9.7-slim-buster
+FROM python:3.10.2-slim-buster
 
-LABEL version="2.3.3"
+LABEL version="2.3.6"
 LABEL description="Docker Image of the FIRST Chesapeake Discord Bot."
 LABEL maintainer="KingLinkTiger@gmail.com"
 
@@ -26,4 +26,4 @@ COPY src/ .
 VOLUME ["/var/log/firstchesapeakediscordbot"]
 
 # Command to run on container start
-CMD [ "python", "-u", "./bot.py" ]
+CMD [ "python", "./bot.py" ]

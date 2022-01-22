@@ -220,6 +220,14 @@ async def event(ctx):
         await ctx.send('Invalid sub command passed...')  
         logger.info("[ftc][event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
 
+@event.command(name='get')
+async def GetEvents(ctx):
+    logger.info("[ftc][event][get] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[ftc][event][get] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        for event in events:
+            logger.info("[ftc][event][get] Bot is currently monitoring: " + event.eventCode )
+
 @event.command(name='add', aliases=['start'])
 async def addEvent(ctx, eventCode, eventName):
     logger.info("[ftc][event][add] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
@@ -520,8 +528,8 @@ async def voiceJoin():
     for channel in bot.get_all_channels(): 
         if channel.name.lower() == BOTTTSCHANNEL.lower() and str(channel.type) == "voice":
             logger.info("[" + channel.name + "] " + "Channel ID Found: "  + str(channel.id))
-            voiceClient = await channel.connect()
-            break
+            logger.info("[" + channel.name + "] " + "Joining Channel!")
+            await channel.connect()
             
 async def voiceStop():
     for vc in bot.voice_clients:
