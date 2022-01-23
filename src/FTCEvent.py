@@ -101,7 +101,7 @@ class FTCEvent:
                     self.logger.warning("[" + self.name + "][processTeams][" + str(team)+ "] " + "Invalid response from server.")
 
             #Sleep for a random float between 0 and 3 seconds
-            time.sleep(uniform(0,3))
+            time.sleep(uniform(0,1))
         
     def getTeams(self):
         self.logger.info("[" + self.name + "][getTeams] " + "Getting teams data")

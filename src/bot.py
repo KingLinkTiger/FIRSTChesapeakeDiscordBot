@@ -33,6 +33,11 @@ import random
 #required for logging to stdout
 import sys
 
+#required for mySQL Queries
+import mysql.connector
+from mysql.connector import Error
+
+
 #Create cache file so we don't make unnecessary calls to the APIs 
 requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(timedelta(days=3)))
 
@@ -46,17 +51,16 @@ formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
-#23JAN22 - Commented out to test stdout logging
-#if not os.path.exists("/var/log/firstchesapeakebot"):
-#    os.makedirs("/var/log/firstchesapeakebot")
+if not os.path.exists("/var/log/firstchesapeakebot"):
+    os.makedirs("/var/log/firstchesapeakebot")
 
-#fh = logging.FileHandler("/var/log/firstchesapeakebot/FIRSTChesapeakeBot.log")
-#fh.setLevel(logging.DEBUG)
+fh = logging.FileHandler("/var/log/firstchesapeakebot/FIRSTChesapeakeBot.log")
+fh.setLevel(logging.DEBUG)
 
-#formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-#fh.setFormatter(formatter)
+formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+fh.setFormatter(formatter)
 
-l#ogger.addHandler(fh)
+logger.addHandler(fh)
 
 #Load Environment Variables from .env file
 load_dotenv()
@@ -88,6 +92,15 @@ ID_Message_ReactionMonitor = int(os.getenv('ID_Message_ReactionMonitor'))
 ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor')
 ID_Channel_ReactionMonitor = int(os.getenv('ID_Channel_ReactionMonitor'))
 
+#Required for mySQL Queries
+mySQL_USER = os.getenv('mySQL_USER')
+mySQL_PASSWORD = os.getenv('mySQL_PASSWORD')
+mySQL_HOST = os.getenv('mySQL_HOST')
+mySQL_DATABASE = os.getenv('mySQL_DATABASE')
+mySQL_TABLE = os.getenv('mySQL_TABLE')
+mySQL_RANKINGTABLE = os.getenv('mySQL_RANKINGTABLE')
+
+
 intents = discord.Intents(
     messages=True,
     guilds=True,
@@ -99,10 +112,142 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', case_insensitive=True, intents=intents)
 
 
-events = {}
+events = []
 
 
 # ===== START COMMANDS SECTION =====
+
+#23JAN22
+@bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
+async def chshigh(ctx):
+    logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
+        logger.info("[chshigh] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        try:
+            mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+            mySQLCursor = mySQLConnection.cursor(dictionary=True)
+            logger.info("[chshigh] " + "Connected to SQL Database")
+        except mysql.connector.Error as err:
+            logger.error("[chshigh] " + "ERROR when trying to connect to SQL Database.")
+            logger.error("[chshigh] " + err.msg)
+
+        #get the high score for each event
+        SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM `{table_name}` WHERE (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')) OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')));".format(table_name=mySQL_TABLE)
+
+        try:
+            mySQLCursor.execute(SQLStatement)
+            result = mySQLCursor.fetchall()
+        except mysql.connector.Error as err:
+            logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
+            logger.error("[chshigh] " + "Something went wrong: {}".format(err))
+            logger.error("[chshigh] %s" % (SQLStatement,))
+        except Exception as err:
+            logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
+            logger.error("[chshigh] " + "Something went wrong: {}".format(err))
+            logger.error("[chshigh] %s" % (SQLStatement,))
+
+        for row in result:
+            eventName = ""
+
+            #Do API call in order to get name of the event
+            try:
+                apiheaders = {'Content-Type':'application/json'}
+                response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + row["eventCode"] + "/", headers=apiheaders, timeout=3)
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                #Server is offline and needs to be handled
+                logger.error("[chshigh] Failed to contact FTC Event Server!")
+            else:
+                #We received a reply from the server
+                if response.status_code == 200:
+                    logger.info("[chshigh] Got data from the FTC Event Server!")
+                    #Get basic event information from server API
+                    responseData = json.loads(response.text)
+                    eventName = str(responseData["name"])
+                    logger.debug("[chshigh] Got: " + eventName)
+                else:
+                    logger.error("[chshigh] Failed to get event name from FTC Event Server!")
+
+            if eventName == "":
+                await ctx.send("""```""" + "--------------------CHS HIGH SCORE------------------------------" + "\n" + "Event Name: " + row["eventCode"] + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + """```""")
+            else:
+                await ctx.send("""```""" + "--------------------CHS HIGH SCORE------------------------------" + "\n" + "Event Name: " + eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + """```""")
+
+#23JAN22
+@bot.command(name="autohigh", aliases=['ah', 'ahigh'])
+async def autohigh(ctx):
+    logger.info("[autohigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
+        logger.info("[autohigh] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        try:
+            mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+            mySQLCursor = mySQLConnection.cursor(dictionary=True)
+            logger.info("[autohigh] " + "Connected to SQL Database")
+        except mysql.connector.Error as err:
+            logger.error("[autohigh] " + "ERROR when trying to connect to SQL Database.")
+            logger.error("[autohigh] " + err.msg)
+
+        # For every event that we are currently monitoring (aka every active event
+        for evnt in events:
+            logger.info("[autohigh] " + "Processing event: " + evnt.eventCode)
+
+            #get the high score for each event
+            SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM {table_name} WHERE (red_auto = (SELECT GREATEST(MAX(red_auto), MAX(blue_auto)) AS highScore  FROM {table_name} WHERE `eventCode` LIKE '{event_code}') OR blue_auto = (SELECT GREATEST(MAX(red_auto), MAX(blue_auto)) AS highScore  FROM {table_name} WHERE `eventCode` LIKE '{event_code}')) AND `eventCode` LIKE '{event_code}';".format(table_name=mySQL_TABLE,event_code=evnt.eventCode)
+
+            try:
+                mySQLCursor.execute(SQLStatement)
+                result = mySQLCursor.fetchall()
+            except mysql.connector.Error as err:
+                logger.error("[autohigh] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[autohigh] " + "Something went wrong: {}".format(err))
+                logger.error("[autohigh] %s" % (SQLStatement,))
+            except Exception as err:
+                logger.error("[autohigh] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[autohigh] " + "Something went wrong: {}".format(err))
+                logger.error("[autohigh] %s" % (SQLStatement,))
+
+            for row in result:
+                #Send the result to the user
+                await ctx.send("""```""" + "--------------------EVENT AUTO HIGH SCORE------------------------------" + "\n" + "Event Name: " + evnt.eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Blue Auto: " + str(row["blue_auto"]) + "\n" + "Red Auto: " + str(row["red_auto"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name  + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name  + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name  + """```""")
+
+#23JAN22
+@bot.command(name="highscore", aliases=['hs', 'high', 'h'])
+async def highscore(ctx):
+    logger.info("[highscore] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
+        logger.info("[highscore] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        try:
+            mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+            mySQLCursor = mySQLConnection.cursor(dictionary=True)
+            logger.info("[highscore] " + "Connected to SQL Database")
+        except mysql.connector.Error as err:
+            logger.error("[highscore] " + "ERROR when trying to connect to SQL Database.")
+            logger.error("[highscore] " + err.msg)
+
+        # For every event that we are currently monitoring (aka every active event
+        for evnt in events:
+            logger.info("[highscore] " + "Processing event: " + evnt.eventCode)
+
+            #get the high score for each event
+            SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM {table_name} WHERE (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM {table_name} WHERE `eventCode` LIKE '{event_code}') OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM {table_name} WHERE `eventCode` LIKE '{event_code}')) AND `eventCode` LIKE '{event_code}';".format(table_name=mySQL_TABLE,event_code=evnt.eventCode)
+
+            try:
+                mySQLCursor.execute(SQLStatement)
+                result = mySQLCursor.fetchall()
+            except mysql.connector.Error as err:
+                logger.error("[highscore] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[highscore] " + "Something went wrong: {}".format(err))
+                logger.error("[highscore] %s" % (SQLStatement,))
+            except Exception as err:
+                logger.error("[highscore] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[highscore] " + "Something went wrong: {}".format(err))
+                logger.error("[highscore] %s" % (SQLStatement,))
+
+            for row in result:
+                #Send the result to the user
+                await ctx.send("""```""" + "--------------------EVENT HIGH SCORE------------------------------" + "\n" + "Event Name: " + evnt.eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name  + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name  + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name  + """```""")
 
 #KLT - 30NOV21 2058 - Added Ping Command
 @bot.command(name="ping")
@@ -111,14 +256,30 @@ async def ping(ctx):
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         await ctx.send("Pong")
 
-def is_connected(ctx):
-    voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
-    return voice_client and voice_client.is_connected()
-
+#22JAN22 - Added vPing Command
 @bot.command(name="vping")
 async def vPing(ctx):
-    if BOTTTSENABLED:
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[vping] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        quotes = [
+            "So. How are you holding up?",
+            "Thank you for helping us help you help us all.",
+            #"Momentum, a function of mass and velocity, is conserved between portals. In layman's terms, speedy thing goes in, speedy thing comes out.",
+            "There. Try it now.",
+            "This is one of MY tests!",
+            "For the record: You ARE adopted, and that's TERRIBLE.",
+            "Press the button!",
+            "Here Come The Test Results: You Are A Horrible Person. That's What It Says, A Horrible Person. We Weren't Even Testing For That.",
+            "How Are You Holding Up? Because I'm A Potato."
+            "I'm fine. Two plus two is...ten, in base four, I'm fine!"
+        ]
 
+        message = random.choice(quotes)
+        await playVoice(ctx, message, "com.au")
+            
+#23JAN22 - Moved this to its own function so we can call it multiple times
+async def playVoice(ctx, msg, accent='com'):
+    if BOTTTSENABLED:
         voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
 
         if not voice is None: #test if voice is None
@@ -128,46 +289,32 @@ async def vPing(ctx):
             await voiceJoin()
 
         if not bot.voice_clients == None:
-            quotes = [
-                "So. How are you holding up?",
-                "Thank you for helping us help you help us all.",
-                #"Momentum, a function of mass and velocity, is conserved between portals. In layman's terms, speedy thing goes in, speedy thing comes out.",
-                "There. Try it now.",
-                "This is one of MY tests!",
-                "For the record: You ARE adopted, and that's TERRIBLE.",
-                "Press the button!",
-                "Here Come The Test Results: You Are A Horrible Person. That's What It Says, A Horrible Person. We Weren't Even Testing For That.",
-                "How Are You Holding Up? Because I'm A Potato."
-            ]
-
-            message = random.choice(quotes)
-
-            logger.debug("[vPing] " + "Trying to play TTS: " + message)
+            logger.debug("[playVoice] " + "Trying to play TTS: " + msg)
 
             fp = BytesIO()
-            gTTS(text=message, lang='en', tld='co.uk', slow=False).write_to_fp(fp)
+            gTTS(text=msg, lang='en', tld=accent, slow=False).write_to_fp(fp)
             fp.seek(0)
 
             for vc in bot.voice_clients:
                 if vc.is_playing():
-                    logger.info("[vPing] " + "Sound is already playing. Stopping.")
+                    logger.info("[playVoice] " + "Sound is already playing. Stopping.")
                     vc.stop()
 
                 try:
                     #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
                     #https://stackoverflow.com/questions/68123040/discord-py-play-gtts-without-saving-the-audio-file
                     #https://github.com/Rapptz/discord.py/pull/5855
-                    logger.debug("[vPing] " + "Try Block")
+                    logger.debug("[playVoice] " + "Try Block")
                     vc.play(FFmpegPCMAudioGTTS(fp.read(), pipe=True))
 
                     while vc.is_playing():
                         await asyncio.sleep(1)
                         
-                    logger.info("[vPing] " + "Finished playing audio")
+                    logger.info("[playVoice] " + "Finished playing audio")
                 except Exception as err:
-                    logger.error("[vPing] " + "ERROR when trying to send TTS to channel .")
-                    logger.error("[vPing] " + "Something went wrong: {}".format(err))
-                    logger.error("[vPing] %s" % (err,))
+                    logger.error("[playVoice] " + "ERROR when trying to send TTS to channel .")
+                    logger.error("[playVoice] " + "Something went wrong: {}".format(err))
+                    logger.error("[playVoice] %s" % (err,))
 
         if not voice is None:
             if not voice.is_connected():
@@ -217,10 +364,10 @@ async def getFTCTeamData(ctx, team_number: str):
             teamFound = False
  
             for eventCode in events:
-                event = events[eventCode]
-                if teamNumberInt in event.teams:
+                evnt = events[eventCode]
+                if teamNumberInt in evnt.teams:
                     teamFound = True
-                    await ctx.send("""```""" + "FIRST Tech Challenge (FTC) Team Information" + "\n" + "--------------------------------------------------" + "\n" + "Team Number: " + team_number + "\n" + "Team Name: " + event.teams[teamNumberInt].name + "\n" + "Team Long Name: " + event.teams[teamNumberInt].school + "\n" + "Location: " + event.teams[teamNumberInt].city + ", " + event.teams[teamNumberInt].state + " " + event.teams[teamNumberInt].country + "\n" + "Rookie Year: " + str(event.teams[teamNumberInt].rookie) + """```""")
+                    await ctx.send("""```""" + "FIRST Tech Challenge (FTC) Team Information" + "\n" + "--------------------------------------------------" + "\n" + "Team Number: " + team_number + "\n" + "Team Name: " + evnt.teams[teamNumberInt].name + "\n" + "Team Long Name: " + evnt.teams[teamNumberInt].school + "\n" + "Location: " + evnt.teams[teamNumberInt].city + ", " + evnt.teams[teamNumberInt].state + " " + evnt.teams[teamNumberInt].country + "\n" + "Rookie Year: " + str(evnt.teams[teamNumberInt].rookie) + """```""")
                     break            
             if teamFound == False:
                 try:
@@ -305,8 +452,9 @@ async def GetEvents(ctx):
     logger.info("[ftc][event][get] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info("[ftc][event][get] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
-        for event in events:
-            logger.info("[ftc][event][get] Bot is currently monitoring: " + event.eventCode )
+        #logger.info("[highscore] " + "Events List: " + events)
+        for evnt in events:
+            logger.info("[ftc][event][get] Bot is currently monitoring: " + evnt.eventCode )
 
 @event.command(name='add', aliases=['start'])
 async def addEvent(ctx, eventCode, eventName):
@@ -315,6 +463,7 @@ async def addEvent(ctx, eventCode, eventName):
         logger.info("[ftc][event][add] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         #If the event code is NOT already in the events DICT
+        #TODO FIX
         if not eventCode in events:
             #Check that we received a valid eventcode
             #Validate Event Code
@@ -337,25 +486,26 @@ async def addEvent(ctx, eventCode, eventName):
                     responseData = json.loads(response.text)
                     
                     #Create FTCEvent instance
-                    logger.info("[ftc event] Attempting to make FTCEvent Instance")
+                    logger.info("[ftc][event][add] Attempting to make FTCEvent Instance")
 
                     await ctx.message.add_reaction('⚠')
 
                     #e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
                     e = FTCEvent(responseData, bot, DiscordChannel.AllDiscordChannels.copy(), eventName)
                     
-                    #Store instance in dict
-                    events[eventCode] = e
+                    #Store instance in list
+                    events.append(e)
 
                     #Add reaction to message to let user know it was created successfully
                     await ctx.message.remove_reaction('⚠', ctx.message.author)
                     await ctx.message.add_reaction('✅')
+                    await playVoice(ctx, "Monitoring " + eventName)
 
                 else:
-                    logger.warning(ctx.message.author.display_name + " provided an invalid event code to the FTC Event Command!")
+                    logger.warning("[ftc][event][add] " + ctx.message.author.display_name + " provided an invalid event code to the FTC Event Command!")
                     await ctx.send("ERROR: Invalid event code provided.")
         else:
-            logger.info("Already monitoring event code " + eventCode + ".")
+            logger.info("[ftc][event][add] Already monitoring event code " + eventCode + ".")
             await ctx.send("ERROR: System is already monitoring event " + eventCode)
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
@@ -367,9 +517,9 @@ async def removeEvent(ctx, eventCode):
         logger.info("[ftc event] " + ctx.message.author.display_name + " is trying to stop the following event code: " + eventCode)
 
         if eventCode.lower() == "all".lower():
-            for event in events:
-                await event.stopWebSocket()
-                del event
+            for evnt in events:
+                await evnt.stopWebSocket()
+                del evnt
                 await ctx.message.add_reaction('🛑')
                 
                 #If this is the last event we were monitoring disconnect voice

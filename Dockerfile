@@ -1,7 +1,7 @@
 # BUILD ENV
 FROM python:3.10.2-slim-buster
 
-LABEL version="2.3.6"
+LABEL version="2.3.9"
 LABEL description="Docker Image of the FIRST Chesapeake Discord Bot."
 LABEL maintainer="KingLinkTiger@gmail.com"
 
