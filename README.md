@@ -64,3 +64,5 @@ Date | Description
 22JAN22 | v2.3.4 - Troubleshooting Voice issues.
 22JAN22 | v2.3.5 - Added FTC Event GET command to report what events are currently being monitored.
 22JAN22 | v2.3.6 - Fixed Voice issues by utilizing FFmpegPCMAudioGTTS. Updated requirements.txt
+22JAN22 | v2.3.7 - Added vPing to test Voice
+23JAN22 | v2.3.8 - Configured logging to stdout

@@ -24,6 +24,15 @@ from DiscordChannel import DiscordChannel
 from gtts import gTTS
 from io import BytesIO
 
+#For fixing voice
+from FFmpegPCMAudioGTTS import FFmpegPCMAudioGTTS
+
+#Required for vPing
+import random
+
+#required for logging to stdout
+import sys
+
 #Create cache file so we don't make unnecessary calls to the APIs 
 requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(timedelta(days=3)))
 
@@ -31,16 +40,23 @@ requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expir
 logger = logging.getLogger('FIRSTChesapeakeBot')
 logger.setLevel(logging.DEBUG)
 
-if not os.path.exists("/var/log/firstchesapeakebot"):
-    os.makedirs("/var/log/firstchesapeakebot")
-
-fh = logging.FileHandler("/var/log/firstchesapeakebot/FIRSTChesapeakeBot.log")
-fh.setLevel(logging.DEBUG)
-
+#23JAN22 - Output to stdout
+sh = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-fh.setFormatter(formatter)
+sh.setFormatter(formatter)
+logger.addHandler(sh)
 
-logger.addHandler(fh)
+#23JAN22 - Commented out to test stdout logging
+#if not os.path.exists("/var/log/firstchesapeakebot"):
+#    os.makedirs("/var/log/firstchesapeakebot")
+
+#fh = logging.FileHandler("/var/log/firstchesapeakebot/FIRSTChesapeakeBot.log")
+#fh.setLevel(logging.DEBUG)
+
+#formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+#fh.setFormatter(formatter)
+
+l#ogger.addHandler(fh)
 
 #Load Environment Variables from .env file
 load_dotenv()
@@ -94,6 +110,70 @@ async def ping(ctx):
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         await ctx.send("Pong")
+
+def is_connected(ctx):
+    voice_client = get(ctx.bot.voice_clients, guild=ctx.guild)
+    return voice_client and voice_client.is_connected()
+
+@bot.command(name="vping")
+async def vPing(ctx):
+    if BOTTTSENABLED:
+
+        voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+
+        if not voice is None: #test if voice is None
+            if not voice.is_connected():
+                await voiceJoin()
+        else:
+            await voiceJoin()
+
+        if not bot.voice_clients == None:
+            quotes = [
+                "So. How are you holding up?",
+                "Thank you for helping us help you help us all.",
+                #"Momentum, a function of mass and velocity, is conserved between portals. In layman's terms, speedy thing goes in, speedy thing comes out.",
+                "There. Try it now.",
+                "This is one of MY tests!",
+                "For the record: You ARE adopted, and that's TERRIBLE.",
+                "Press the button!",
+                "Here Come The Test Results: You Are A Horrible Person. That's What It Says, A Horrible Person. We Weren't Even Testing For That.",
+                "How Are You Holding Up? Because I'm A Potato."
+            ]
+
+            message = random.choice(quotes)
+
+            logger.debug("[vPing] " + "Trying to play TTS: " + message)
+
+            fp = BytesIO()
+            gTTS(text=message, lang='en', tld='co.uk', slow=False).write_to_fp(fp)
+            fp.seek(0)
+
+            for vc in bot.voice_clients:
+                if vc.is_playing():
+                    logger.info("[vPing] " + "Sound is already playing. Stopping.")
+                    vc.stop()
+
+                try:
+                    #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
+                    #https://stackoverflow.com/questions/68123040/discord-py-play-gtts-without-saving-the-audio-file
+                    #https://github.com/Rapptz/discord.py/pull/5855
+                    logger.debug("[vPing] " + "Try Block")
+                    vc.play(FFmpegPCMAudioGTTS(fp.read(), pipe=True))
+
+                    while vc.is_playing():
+                        await asyncio.sleep(1)
+                        
+                    logger.info("[vPing] " + "Finished playing audio")
+                except Exception as err:
+                    logger.error("[vPing] " + "ERROR when trying to send TTS to channel .")
+                    logger.error("[vPing] " + "Something went wrong: {}".format(err))
+                    logger.error("[vPing] %s" % (err,))
+
+        if not voice is None:
+            if not voice.is_connected():
+                await voiceStop()
+        else:
+            await voiceStop()
 
 @bot.command(name='ftcteamtoa')
 async def getFTCTeamDataTOA(ctx, team_number: str):
@@ -533,7 +613,7 @@ async def voiceJoin():
             
 async def voiceStop():
     for vc in bot.voice_clients:
-        await vc.disconnect()
+        await vc.disconnect(force=True)
 
 def checkFTCEVENTSERVER_APIKey():
     if FTCEVENTSERVER_APIKey:
