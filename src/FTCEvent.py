@@ -167,6 +167,10 @@ class FTCEvent:
             #Access to the Discord Client
             await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH LOADED" + "\n" + "--------------------------------------------------" + "\n" + "Red  1: " + str(red1) + " - " + self.teams[red1].name + "\n" + "Red  2: " + str(red2) + " - " + self.teams[red2].name  + "\n" + "Blue 1: " + str(blue1) + " - " + self.teams[blue1].name  + "\n" + "Blue 2: " + str(blue2) + " - " + self.teams[blue2].name  + """```""")
             
+            #28JAN22 - Added alert to notify staff to start the recording on first match load
+            if json_data["payload"]["number"] == 1:
+                await self.sendTTS("Reminder! Start the recording for " + self.eventName + " NOW!")
+
     async def matchStart(self, json_data):  
         await self.sendMatchResult("""```""" + "Event: " + self.name + "\n" + "Match Number: " + json_data["payload"]["shortName"] + "\n" + "Status: MATCH STARTED" + """```""")
         await self.sendTTS(self.eventName + " has started")
@@ -500,7 +504,6 @@ class FTCEvent:
                         #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
                         #https://stackoverflow.com/questions/68123040/discord-py-play-gtts-without-saving-the-audio-file
                         #https://github.com/Rapptz/discord.py/pull/5855
-                        self.logger.debug("[" + self.name + "][sendTTS] " + "Try Block")
                         vc.play(FFmpegPCMAudioGTTS(fp.read(), pipe=True))
                         #vc.play(discord.FFmpegPCMAudio(sound_fp.read(), pipe=True), after=lambda e: self.logger.error("[" + self.name + "][sendTTS] " + "Something went wrong: {}".format(err)) if e else None)
                         #vc.play(FFmpegPCMAudioGTTS(sound_fp.read(), pipe=True), after=print("Done"))

@@ -2,6 +2,24 @@
 
 All notable changes to the project will be documented in this file.
 
+
+## [2.3.10] - 28JAN22
+### Added
+- Alert to notify staff of the start of the first match for an event, so that they can start the event recording.
+- Code to change the Bot's presence when shutting down
+- When an event is being monitored the bot will say it is streaming on twitch
+
+### Changed
+- stopWebSockets For Loop to utilize a known good loop
+- Changed len(events) == 0 to just (not events)
+- Fixed issue with bot leaving voice channel after removing the last event the bot was monitoring
+- Fixed stopBot to gracefully shutdown the bot
+- Fixed issues in testBuild.sh script to remove older images
+- Changed CHS High Score, Event High Score, and Event Auto High Score to use Embeds
+
+### Removed
+- Removed older FTC Event function
+
 ## [2.3.9] - 23JAN22
 ### Added
 - CHANGELOG

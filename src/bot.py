@@ -168,10 +168,37 @@ async def chshigh(ctx):
                 else:
                     logger.error("[chshigh] Failed to get event name from FTC Event Server!")
 
+            embedVar = discord.Embed(title="CHS HIGH SCORE", description="Current High Score for CHS", color=discord.Colour.blue())
+
             if eventName == "":
-                await ctx.send("""```""" + "--------------------CHS HIGH SCORE------------------------------" + "\n" + "Event Name: " + row["eventCode"] + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + """```""")
+                embedVar.add_field(name="Event Name", value=row["eventCode"], inline=False)
+
             else:
-                await ctx.send("""```""" + "--------------------CHS HIGH SCORE------------------------------" + "\n" + "Event Name: " + eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + """```""")
+                embedVar.add_field(name="Event Name", value=eventName, inline=False)
+
+            embedVar.add_field(name="Event Date", value=(row["startTime"].strftime("%B %d, %Y")), inline=False)
+
+            embedVar.add_field(name="Match Number", value=row["matchBrief_matchName"], inline=False)
+
+            embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+            #RED LEFT BLUE RIGHT
+            if row["redScore"] > row["blueScore"]:
+                embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                embedVar.add_field(name="Blue Score", value=str(row["blueScore"]), inline=True)
+            elif row["redScore"] < row["blueScore"]:
+                embedVar.add_field(name="Red Score", value=str(row["redScore"]), inline=True)
+                embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+            elif row["redScore"] == row["blueScore"]:
+                embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+
+            embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+            embedVar.add_field(name="Red Alliance", value=(str(row["matchBrief_red_team1"]) + "\n" + str(row["matchBrief_red_team2"])), inline=False)
+            embedVar.add_field(name="Blue Alliance", value=(str(row["matchBrief_blue_team1"]) + "\n" + str(row["matchBrief_blue_team2"])), inline=False)
+
+            await ctx.send(embed=embedVar)
 
 #23JAN22
 @bot.command(name="autohigh", aliases=['ah', 'ahigh'])
@@ -208,8 +235,34 @@ async def autohigh(ctx):
                 logger.error("[autohigh] %s" % (SQLStatement,))
 
             for row in result:
-                #Send the result to the user
-                await ctx.send("""```""" + "--------------------EVENT AUTO HIGH SCORE------------------------------" + "\n" + "Event Name: " + evnt.eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Blue Auto: " + str(row["blue_auto"]) + "\n" + "Red Auto: " + str(row["red_auto"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name  + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name  + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name  + """```""")
+                embedVar = discord.Embed(title="EVENT AUTO HIGH SCORE", description=("Current High Auto Score for " + evnt.eventName), color=discord.Colour.blue())
+
+                embedVar.add_field(name="Match Number", value=row["matchBrief_matchName"], inline=False)
+
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+                #RED LEFT BLUE RIGHT
+                embedVar.add_field(name="Red Score", value=str(row["redScore"]), inline=True)
+                embedVar.add_field(name="Blue Score", value=str(row["blueScore"]), inline=True)
+
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+                if row["red_auto"] > row["blue_auto"]:
+                    embedVar.add_field(name="Red Auto", value=(str(row["red_auto"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Auto", value=str(row["blue_auto"]), inline=True)
+                elif row["red_auto"] < row["blue_auto"]:
+                    embedVar.add_field(name="Red Auto", value=str(row["red_auto"]), inline=True)
+                    embedVar.add_field(name="Blue Auto", value=(str(row["blue_auto"]) + " 🏆"), inline=True)
+                elif row["red_auto"] == row["blue_auto"]:
+                    embedVar.add_field(name="Red Auto", value=(str(row["red_auto"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Auto", value=(str(row["blue_auto"]) + " 🏆"), inline=True)
+
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+                embedVar.add_field(name="Red Alliance", value=(str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name), inline=False)
+                embedVar.add_field(name="Blue Alliance", value=(str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name + "\n" + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name), inline=False)
+
+                await ctx.send(embed=embedVar)
 
 #23JAN22
 @bot.command(name="highscore", aliases=['hs', 'high', 'h'])
@@ -246,8 +299,29 @@ async def highscore(ctx):
                 logger.error("[highscore] %s" % (SQLStatement,))
 
             for row in result:
-                #Send the result to the user
-                await ctx.send("""```""" + "--------------------EVENT HIGH SCORE------------------------------" + "\n" + "Event Name: " + evnt.eventName + "\n" + "Date: " + str(row["startTime"]) + "\n\n" + "Match Number: " + row["matchBrief_matchName"] + "\n\n" + "Blue Score: " + str(row["blueScore"]) + "\n" + "Red Score: " + str(row["redScore"]) + "\n\n" + "Red  1: " + str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + "Red  2: " + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name  + "\n" + "Blue 1: " + str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name  + "\n" + "Blue 2: " + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name  + """```""")
+                embedVar = discord.Embed(title="EVENT HIGH SCORE", description=("Current High Score for " + evnt.eventName), color=discord.Colour.blue())
+
+                embedVar.add_field(name="Match Number", value=row["matchBrief_matchName"], inline=False)
+
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+                #RED LEFT BLUE RIGHT
+                if row["redScore"] > row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Score", value=str(row["blueScore"]), inline=True)
+                elif row["redScore"] < row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=str(row["redScore"]), inline=True)
+                    embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+                elif row["redScore"] == row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+
+                embedVar.add_field(name="Red Alliance", value=(str(row["matchBrief_red_team1"]) + " - " + evnt.teams[row["matchBrief_red_team1"]].name + "\n" + str(row["matchBrief_red_team2"]) + " - " + evnt.teams[row["matchBrief_red_team2"]].name), inline=False)
+                embedVar.add_field(name="Blue Alliance", value=(str(row["matchBrief_blue_team1"]) + " - " + evnt.teams[row["matchBrief_blue_team1"]].name + "\n" + str(row["matchBrief_blue_team2"]) + " - " + evnt.teams[row["matchBrief_blue_team2"]].name), inline=False)
+
+                await ctx.send(embed=embedVar)
 
 #KLT - 30NOV21 2058 - Added Ping Command
 @bot.command(name="ping")
@@ -304,7 +378,6 @@ async def playVoice(ctx, msg, accent='com'):
                     #22JAN22 - Using Example Code (https://github.com/Rapptz/discord.py/blob/master/examples/basic_voice.py)
                     #https://stackoverflow.com/questions/68123040/discord-py-play-gtts-without-saving-the-audio-file
                     #https://github.com/Rapptz/discord.py/pull/5855
-                    logger.debug("[playVoice] " + "Try Block")
                     vc.play(FFmpegPCMAudioGTTS(fp.read(), pipe=True))
 
                     while vc.is_playing():
@@ -469,8 +542,11 @@ async def addEvent(ctx, eventCode, eventName):
             #Validate Event Code
             
             #If this is the first event we are monitoring join voice
-            if len(events) == 0 and BOTTTSENABLED:
-                await voiceJoin()
+            if (not events):
+                if BOTTTSENABLED:
+                    await voiceJoin()
+
+                await bot.change_presence(activity=discord.Streaming(name="FIRST Chesapeake Event", url="https://www.twitch.tv/firstchesapeake"))
                 
             try:
                 apiheaders = {'Content-Type':'application/json'}
@@ -513,97 +589,37 @@ async def addEvent(ctx, eventCode, eventName):
 @event.command(name='remove', aliases=['stop'])
 async def removeEvent(ctx, eventCode):
     if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
-        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
-        logger.info("[ftc event] " + ctx.message.author.display_name + " is trying to stop the following event code: " + eventCode)
+        logger.info("[ftc][event][remove] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        logger.info("[ftc][event][remove] " + ctx.message.author.display_name + " is trying to stop the following event code: " + eventCode)
 
         if eventCode.lower() == "all".lower():
             for evnt in events:
                 await evnt.stopWebSocket()
-                del evnt
+                events.remove(evnt)
                 await ctx.message.add_reaction('🛑')
                 
                 #If this is the last event we were monitoring disconnect voice
-                if len(events) == 0 and BOTTTSENABLED:
+                if not events and BOTTTSENABLED:
                     await voiceStop()
         else:
-            if eventCode in events:
-                await events[eventCode].stopWebSocket()
-                del events[eventCode]
-                await ctx.message.add_reaction('🛑')
-                
-                #If this is the last event we were monitoring disconnect voice
-                if len(events) == 0 and BOTTTSENABLED:
-                    await voiceStop()
+            eventFound = False
+
+            for evnt in events:
+                if eventCode == evnt.eventCode:
+                    eventFound = True
+
+                    await evnt.stopWebSocket()
+                    events.remove(evnt)
+                    await ctx.message.add_reaction('🛑')
                     
-            else:
+                    #If this is the last event we were monitoring disconnect voice
+                    if (not events): 
+                        if BOTTTSENABLED:
+                            await voiceStop()
+                        await bot.change_presence(status=None)
+            if not eventFound:
                 logger.error("Unable to remove event! Event code was not being monitored by system: " + eventCode + ".")
                 await ctx.send("ERROR: System is not monitoring event " + eventCode)
-    else:
-        logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
-
-
-@ftc.command(name='event_O')
-async def event(ctx, verb: str, noun: str): 
-    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
-    #if ctx.message.channel.name == BOTADMINCHANNEL and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
-        logger.info("[ftc event] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
-        
-        formattedVerb = verb.lower()
-        
-        if formattedVerb == "add" or formattedVerb == "start":
-            #If the event code is NOT already in the events DICT
-            if not noun in events:
-                #Check that we received a valid eventcode
-                #Validate Event Code
-                
-                #If this is the first event we are monitoring join voice
-                if len(events) == 0 and BOTTTSENABLED:
-                    await voiceJoin()
-                    
-                try:
-                    apiheaders = {'Content-Type':'application/json'}
-                    response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + noun + "/", headers=apiheaders, timeout=3)
-                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-                    #Server is offline and needs to be handled
-                    logger.error("Failed to contact FTC Event Server!")
-                    await ctx.send("ERROR: Failed to contact FTC Event Server!")
-                else:
-                    #We received a reply from the server
-                    if response.status_code == 200:
-                        #Get basic event information from server API
-                        responseData = json.loads(response.text)
-                        
-                        #Create FTCEvent instance
-                        logger.info("[ftc event] Attempting to make FTCEvent Instance")
-                        #e = FTCEvent(responseData, bot, BOTPRODUCTIONCHANNEL_ID, BOTADMINCHANNEL_ID)
-                        e = FTCEvent(responseData, bot, DiscordChannel.AllDiscordChannels.copy())
-                        
-                        #Store instance in dict
-                        events[noun] = e
-
-                        #Add reaction to message to let user know it was created successfully
-                        await ctx.message.add_reaction('✅')
-
-                    else:
-                        logger.warning(ctx.message.author.display_name + " provided an invalid event code to the FTC Event Command!")
-                        await ctx.send("ERROR: Invalid event code provided.")
-            else:
-                logger.info("Already monitoring event code " + noun + ".")
-                await ctx.send("ERROR: System is already monitoring event " + noun)
-
-        elif formattedVerb == "remove" or formattedVerb == "delete" or formattedVerb == "stop":
-            if noun in events:
-                await events[noun].stopWebSocket()
-                del events[noun]
-                await ctx.message.add_reaction('🛑')
-                
-                #If this is the last event we were monitoring disconnect voice
-                if len(events) == 0 and BOTTTSENABLED:
-                    await voiceStop()
-                
-            else:
-                logger.error("Unable to remove event! Event code was not being monitored by system: " + noun + ".")
-                await ctx.send("ERROR: System is not monitoring event " + noun)
     else:
         logger.warning(ctx.message.author.display_name + " attempted to invoke the FTC Event Command on server " + ctx.guild.name + "! Command provided: " + ctx.message.content)
 
@@ -843,26 +859,37 @@ def findChannels():
 async def stopWebSockets():
     #Stop the websocket for each event
     logger.info("Stopping all websockets")
-    for eventCode in events:
-        event = events[eventCode]
-        await event.stopWebSocket()
+
+    #28JAN22 - Updated code to use consistant for loop that we know works.
+    for evnt in events:
+        logger.info("[stopWebSockets] " + "Processing event: " + evnt.eventCode)
+        await evnt.stopWebSocket()
 
 async def stopDiscordBot():
     #Stop the Discord Bot
-    logger.info("Logging out Discord bot")
-    await bot.logout()   
+    logger.info("[stopDiscordBot] Logging out Discord bot!")
+
+    #Set the bot's status to offline
+    await bot.change_presence(status=discord.Status.offline)
+
+    #Logout/Close the bot
+    await bot.close()   
 
 async def stopBot():
-    await voiceStop()
+    logger.info("[stopBot] Function was called!")
+
+    #Removing because default close() command handles this
+    #f_task3 = asyncio.create_task(voiceStop())
+    #loop.run_until_complete(f_task3)
 
     f_task1 = asyncio.create_task(stopWebSockets())
-    await f_task1
 
     f_task2 = asyncio.create_task(stopDiscordBot())
-    await f_task2
+
+    await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
 
     #Tell logger to orderly shutdown all logs
-    logger.warning("Shutting down logging")
+    logger.warning("[stopBot] Bot has shut down. Stopping logging!")
     logging.shutdown()
 
     # FIN
@@ -870,10 +897,14 @@ async def stopBot():
 
 
 # Write to the log to let us know the bot is, about to be, online and ready to go
-logger.info("Bot started and connecting to DISCORD")
+logger.info("[main] Bot started and connecting to DISCORD")
 
 # Script will hold on this call untill process/container is stopped
-bot.run(DISCORD_TOKEN)
-
-# All calls after the above should only run when process/container is being stopped
-asyncio.run(stopBot())
+try:
+    bot.run(DISCORD_TOKEN)
+except Exception as e:
+    print(e)
+finally:
+    # All calls after the above should only run when process/container is being stopped
+    logger.warning("[WARNING] THE BOT IS SHUTTING DOWN!")
+    asyncio.run(stopBot())
