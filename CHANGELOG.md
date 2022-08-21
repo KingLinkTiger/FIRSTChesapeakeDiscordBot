@@ -2,6 +2,17 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.11] - 30JAN22
+### Added
+- Added Active Commentator Role Logic
+- When user joins Commentator Live they get assigned the role
+- Added task to remove role at midnight Eastern
+
+### Changed
+- Fixed District High Score SQL query to filter out test events.
+- Updated ftcteam to use the 2021 API... Whoops...
+- Removed channel restriction for Ping command.
+- Fixed ftcteam for loop
 
 ## [2.3.10] - 28JAN22
 ### Added

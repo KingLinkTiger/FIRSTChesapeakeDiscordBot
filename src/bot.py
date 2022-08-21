@@ -1,8 +1,5 @@
-#TODO: On container shutdown gracefully stop everything (Logging and websockets)
-#TODO: Add Text To Speech capability for live event feed
-
 import os, os.path
-from datetime import datetime, timedelta
+import datetime 
 import requests
 import requests_cache
 import json
@@ -38,8 +35,10 @@ import mysql.connector
 from mysql.connector import Error
 
 
+
+
 #Create cache file so we don't make unnecessary calls to the APIs 
-requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(timedelta(days=3)))
+requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(datetime.timedelta(days=3)))
 
 #Start logging
 logger = logging.getLogger('FIRSTChesapeakeBot')
@@ -100,6 +99,12 @@ mySQL_DATABASE = os.getenv('mySQL_DATABASE')
 mySQL_TABLE = os.getenv('mySQL_TABLE')
 mySQL_RANKINGTABLE = os.getenv('mySQL_RANKINGTABLE')
 
+# Commentator ROLE Management
+#from discord.ext import tasks #TODO Autoremove the role
+ROLE_ACTIVECOMMENTATOR = int(os.getenv('ROLE_ACTIVECOMMENTATOR'))
+ROLE_COMMENTATOR = int(os.getenv('ROLE_COMMENTATOR'))
+ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_Channel_Voice_CommentatorLive'))
+
 
 intents = discord.Intents(
     messages=True,
@@ -117,6 +122,26 @@ events = []
 
 # ===== START COMMANDS SECTION =====
 
+#30JAN22 - Added End of Day Command
+@bot.command(name="endofday", aliases=['eod'])
+async def endOfDay(ctx):
+    #TODO
+    # Clear all messages in bot-spam
+    # Clear all messages in Event-results
+    # Clear all messages in Registration
+    # Clear all messages in Scorekeeping-coms
+    # Clear all messages in backstage
+
+    #Remove ActiveCommentator role from all users
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        for guild in bot.guilds:
+            logger.debug("[on_voice_state_update] Guild Name: " + guild.name)
+            obj_ROLE_ACTIVECOMMENTATOR = guild.get_role(ROLE_ACTIVECOMMENTATOR)
+
+        for member in bot.get_all_members():
+            if ROLE_ACTIVECOMMENTATOR in [y.id for y in member.roles]:
+                await member.remove_roles(obj_ROLE_ACTIVECOMMENTATOR)
+
 #23JAN22
 @bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
 async def chshigh(ctx):
@@ -133,7 +158,7 @@ async def chshigh(ctx):
             logger.error("[chshigh] " + err.msg)
 
         #get the high score for each event
-        SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM `{table_name}` WHERE (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')) OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')));".format(table_name=mySQL_TABLE)
+        SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2') AND (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')) OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')));".format(table_name=mySQL_TABLE)
 
         try:
             mySQLCursor.execute(SQLStatement)
@@ -326,7 +351,8 @@ async def highscore(ctx):
 #KLT - 30NOV21 2058 - Added Ping Command
 @bot.command(name="ping")
 async def ping(ctx):
-    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+    #30JAN22 - Removed channel restriction
+    if ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
         await ctx.send("Pong")
 
@@ -436,8 +462,8 @@ async def getFTCTeamData(ctx, team_number: str):
             logger.info(ctx.message.author.display_name + " requested team number " + team_number + " from FIRST FTC DB.")
             teamFound = False
  
-            for eventCode in events:
-                evnt = events[eventCode]
+            for evnt in events: #30JAN22 - Updated to use new for loop format
+                logger.info("[ftcteam] " + "Processing event: " + evnt.eventCode)
                 if teamNumberInt in evnt.teams:
                     teamFound = True
                     await ctx.send("""```""" + "FIRST Tech Challenge (FTC) Team Information" + "\n" + "--------------------------------------------------" + "\n" + "Team Number: " + team_number + "\n" + "Team Name: " + evnt.teams[teamNumberInt].name + "\n" + "Team Long Name: " + evnt.teams[teamNumberInt].school + "\n" + "Location: " + evnt.teams[teamNumberInt].city + ", " + evnt.teams[teamNumberInt].state + " " + evnt.teams[teamNumberInt].country + "\n" + "Rookie Year: " + str(evnt.teams[teamNumberInt].rookie) + """```""")
@@ -445,7 +471,7 @@ async def getFTCTeamData(ctx, team_number: str):
             if teamFound == False:
                 try:
                     apiheaders = {'Accept':'application/json', 'Authorization':'Basic ' + FTCEVENTS_KEY}
-                    response = requests.get('https://ftc-api.firstinspires.org/v2.0/2020/teams?teamNumber='+team_number, headers=apiheaders, timeout=3)
+                    response = requests.get('https://ftc-api.firstinspires.org/v2.0/2021/teams?teamNumber='+team_number, headers=apiheaders, timeout=3)
                 except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
                     #Server is offline and needs to be handled
                     logger.error("Failed to contact FIRST FTC API!")
@@ -529,6 +555,25 @@ async def GetEvents(ctx):
         for evnt in events:
             logger.info("[ftc][event][get] Bot is currently monitoring: " + evnt.eventCode )
 
+# TODO - Add Rename capability to event
+@event.command(name='edit', aliases=['rename'])
+async def editEvent(ctx, eventCode, eventName):
+    logger.info("[ftc][event][edit] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 1] and ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
+        logger.info("[ftc][event][edit] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
+        
+        eventFound = False
+
+        for evnt in events:
+            if eventCode == evnt.eventCode:
+                eventFound = True
+
+                evnt.eventName = eventName
+
+        if not eventFound:
+            logger.error("[ftc][event][edit] Unable to edit event! Event code was not being monitored by system: " + eventCode + ".")
+            await ctx.send("[ftc][event][edit] ERROR: System is not monitoring event " + eventCode)
+
 @event.command(name='add', aliases=['start'])
 async def addEvent(ctx, eventCode, eventName):
     logger.info("[ftc][event][add] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
@@ -536,7 +581,6 @@ async def addEvent(ctx, eventCode, eventName):
         logger.info("[ftc][event][add] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
         
         #If the event code is NOT already in the events DICT
-        #TODO FIX
         if not eventCode in events:
             #Check that we received a valid eventcode
             #Validate Event Code
@@ -649,8 +693,9 @@ async def server(ctx, verb: str, noun: str):
                     await ctx.send("ERROR: Failed to contact FTC Event Server!")
                 else:
                     #We received a reply from the server
-
                     if response.status_code == 200:
+                        responseData = json.loads(response.text)
+
                         logger.info("Received API Key: " + responseData["key"])
                         await ctx.send("Received API Key: " + responseData["key"])
                     elif response.status_code == 400:
@@ -708,6 +753,27 @@ async def clear(ctx, amount: int):
 # ===== END COMMANDS SECTION =====
 
 # ===== START BOT EVENT SECTION ===== 
+
+#30JAN22 - On Voice Channel Join
+#TODO
+@bot.event
+async def on_voice_state_update(member, before, after):
+    logger.info("[on_voice_state_update] " + member.display_name + " has updated their voice status!")
+
+    if after.channel is not None:
+        for guild in bot.guilds:
+            logger.debug("[on_voice_state_update] Guild Name: " + guild.name)
+            obj_ROLE_ACTIVECOMMENTATOR = guild.get_role(ROLE_ACTIVECOMMENTATOR)
+
+        logger.debug("[on_voice_state_update] obj_ROLE_ACTIVECOMMENTATOR: " + obj_ROLE_ACTIVECOMMENTATOR.name)
+
+        if after.channel.id == ID_Channel_Voice_CommentatorLive: # If the joined channel is COMMENTATOR LIVE
+            if ROLE_COMMENTATOR in [y.id for y in member.roles]: #If the user is a COMMENTATOR
+                if ROLE_ACTIVECOMMENTATOR not in [y.id for y in member.roles]: #If the user is NOT already an ACTIVE COMMANTATOR
+                    #Assign the role
+                    logger.info("[on_voice_state_update][ACTIVECOMMENTATOR] Adding " + member.display_name + " to Active Commentator Role!")
+                    await member.add_roles(obj_ROLE_ACTIVECOMMENTATOR)
+
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandNotFound):
@@ -726,7 +792,9 @@ async def on_ready():
     tChannel = bot.get_channel(ID_Channel_ReactionMonitor)
     tMessage = await tChannel.fetch_message(ID_Message_ReactionMonitor)
     await tMessage.add_reaction('🤖')
-    
+
+    #Start the task to remove the active Commentator Role
+    #removeActiveCommentatorRole.start()
 
 @bot.event
 async def on_member_join(member):
@@ -770,6 +838,22 @@ async def on_raw_reaction_add(payload):
 
 
 # ===== START FUNCTION SECTION ===== 
+
+#TODO
+#30JAN22 - Remove Active Commentator Role at Midnight Eastern
+#tz = datetime.timezone(datetime.timedelta(hours=-5))
+
+#when = [
+#    datetime.time(0, 0, tzinfo=tz),   # EST midnight
+#]
+
+#@tasks.loop(time=when)
+#async def removeActiveCommentatorRole():
+#    role = discord.utils.get(bot.guilds.roles, id=ROLE_ReactionMonitor)
+#    for member in bot.get_all_members():
+#        if role in member.roles:
+#            await member.remove_roles(role)
+
 async def voiceJoin():
     for channel in bot.get_all_channels(): 
         if channel.name.lower() == BOTTTSCHANNEL.lower() and str(channel.type) == "voice":
