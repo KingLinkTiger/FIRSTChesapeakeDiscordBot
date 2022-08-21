@@ -105,6 +105,9 @@ ROLE_ACTIVECOMMENTATOR = int(os.getenv('ROLE_ACTIVECOMMENTATOR'))
 ROLE_COMMENTATOR = int(os.getenv('ROLE_COMMENTATOR'))
 ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_Channel_Voice_CommentatorLive'))
 
+# Get master variables to disable portions of the bot if desired
+bool_FTCEVENTSSERVER = bool(os.getenv('bool_FTCEVENTSSERVER'))
+
 
 intents = discord.Intents(
     messages=True,
@@ -145,85 +148,88 @@ async def endOfDay(ctx):
 #23JAN22
 @bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
 async def chshigh(ctx):
-    logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
+    if bool_FTCEVENTSSERVER:
+        logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
 
-    if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
-        logger.info("[chshigh] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
-        try:
-            mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
-            mySQLCursor = mySQLConnection.cursor(dictionary=True)
-            logger.info("[chshigh] " + "Connected to SQL Database")
-        except mysql.connector.Error as err:
-            logger.error("[chshigh] " + "ERROR when trying to connect to SQL Database.")
-            logger.error("[chshigh] " + err.msg)
-
-        #get the high score for each event
-        SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2') AND (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')) OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')));".format(table_name=mySQL_TABLE)
-
-        try:
-            mySQLCursor.execute(SQLStatement)
-            result = mySQLCursor.fetchall()
-        except mysql.connector.Error as err:
-            logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
-            logger.error("[chshigh] " + "Something went wrong: {}".format(err))
-            logger.error("[chshigh] %s" % (SQLStatement,))
-        except Exception as err:
-            logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
-            logger.error("[chshigh] " + "Something went wrong: {}".format(err))
-            logger.error("[chshigh] %s" % (SQLStatement,))
-
-        for row in result:
-            eventName = ""
-
-            #Do API call in order to get name of the event
+        if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
+            logger.info("[chshigh] " + ctx.message.author.display_name + " ran command " + ctx.message.content)
             try:
-                apiheaders = {'Content-Type':'application/json'}
-                response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + row["eventCode"] + "/", headers=apiheaders, timeout=3)
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-                #Server is offline and needs to be handled
-                logger.error("[chshigh] Failed to contact FTC Event Server!")
-            else:
-                #We received a reply from the server
-                if response.status_code == 200:
-                    logger.info("[chshigh] Got data from the FTC Event Server!")
-                    #Get basic event information from server API
-                    responseData = json.loads(response.text)
-                    eventName = str(responseData["name"])
-                    logger.debug("[chshigh] Got: " + eventName)
+                mySQLConnection = mysql.connector.connect(user=mySQL_USER, password=mySQL_PASSWORD, host=mySQL_HOST, database=mySQL_DATABASE)
+                mySQLCursor = mySQLConnection.cursor(dictionary=True)
+                logger.info("[chshigh] " + "Connected to SQL Database")
+            except mysql.connector.Error as err:
+                logger.error("[chshigh] " + "ERROR when trying to connect to SQL Database.")
+                logger.error("[chshigh] " + err.msg)
+
+            #get the high score for each event
+            SQLStatement = "SELECT eventCode,matchBrief_matchName,startTime,redScore,blueScore,red_auto,blue_auto,matchBrief_red_team1,matchBrief_red_team2,matchBrief_blue_team1,matchBrief_blue_team2 FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2') AND (redScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')) OR blueScore = (SELECT GREATEST(MAX(redScore), MAX(blueScore)) AS highScore  FROM `{table_name}` WHERE (`eventCode` <> 'bottest1' AND `eventCode` <> 'bottest2')));".format(table_name=mySQL_TABLE)
+
+            try:
+                mySQLCursor.execute(SQLStatement)
+                result = mySQLCursor.fetchall()
+            except mysql.connector.Error as err:
+                logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[chshigh] " + "Something went wrong: {}".format(err))
+                logger.error("[chshigh] %s" % (SQLStatement,))
+            except Exception as err:
+                logger.error("[chshigh] " + "ERROR when trying to SELECT from SQL Database.")
+                logger.error("[chshigh] " + "Something went wrong: {}".format(err))
+                logger.error("[chshigh] %s" % (SQLStatement,))
+
+            for row in result:
+                eventName = ""
+
+                #Do API call in order to get name of the event
+                try:
+                    apiheaders = {'Content-Type':'application/json'}
+                    response = requests.get(FTCEVENTSERVER + "/api/v1/events/" + row["eventCode"] + "/", headers=apiheaders, timeout=3)
+                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                    #Server is offline and needs to be handled
+                    logger.error("[chshigh] Failed to contact FTC Event Server!")
                 else:
-                    logger.error("[chshigh] Failed to get event name from FTC Event Server!")
+                    #We received a reply from the server
+                    if response.status_code == 200:
+                        logger.info("[chshigh] Got data from the FTC Event Server!")
+                        #Get basic event information from server API
+                        responseData = json.loads(response.text)
+                        eventName = str(responseData["name"])
+                        logger.debug("[chshigh] Got: " + eventName)
+                    else:
+                        logger.error("[chshigh] Failed to get event name from FTC Event Server!")
 
-            embedVar = discord.Embed(title="CHS HIGH SCORE", description="Current High Score for CHS", color=discord.Colour.blue())
+                embedVar = discord.Embed(title="CHS HIGH SCORE", description="Current High Score for CHS", color=discord.Colour.blue())
 
-            if eventName == "":
-                embedVar.add_field(name="Event Name", value=row["eventCode"], inline=False)
+                if eventName == "":
+                    embedVar.add_field(name="Event Name", value=row["eventCode"], inline=False)
 
-            else:
-                embedVar.add_field(name="Event Name", value=eventName, inline=False)
+                else:
+                    embedVar.add_field(name="Event Name", value=eventName, inline=False)
 
-            embedVar.add_field(name="Event Date", value=(row["startTime"].strftime("%B %d, %Y")), inline=False)
+                embedVar.add_field(name="Event Date", value=(row["startTime"].strftime("%B %d, %Y")), inline=False)
 
-            embedVar.add_field(name="Match Number", value=row["matchBrief_matchName"], inline=False)
+                embedVar.add_field(name="Match Number", value=row["matchBrief_matchName"], inline=False)
 
-            embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
 
-            #RED LEFT BLUE RIGHT
-            if row["redScore"] > row["blueScore"]:
-                embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
-                embedVar.add_field(name="Blue Score", value=str(row["blueScore"]), inline=True)
-            elif row["redScore"] < row["blueScore"]:
-                embedVar.add_field(name="Red Score", value=str(row["redScore"]), inline=True)
-                embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
-            elif row["redScore"] == row["blueScore"]:
-                embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
-                embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+                #RED LEFT BLUE RIGHT
+                if row["redScore"] > row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Score", value=str(row["blueScore"]), inline=True)
+                elif row["redScore"] < row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=str(row["redScore"]), inline=True)
+                    embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
+                elif row["redScore"] == row["blueScore"]:
+                    embedVar.add_field(name="Red Score", value=(str(row["redScore"]) + " 🏆"), inline=True)
+                    embedVar.add_field(name="Blue Score", value=(str(row["blueScore"]) + " 🏆"), inline=True)
 
-            embedVar.add_field(name=chr(173), value=chr(173), inline=False)
+                embedVar.add_field(name=chr(173), value=chr(173), inline=False)
 
-            embedVar.add_field(name="Red Alliance", value=(str(row["matchBrief_red_team1"]) + "\n" + str(row["matchBrief_red_team2"])), inline=False)
-            embedVar.add_field(name="Blue Alliance", value=(str(row["matchBrief_blue_team1"]) + "\n" + str(row["matchBrief_blue_team2"])), inline=False)
+                embedVar.add_field(name="Red Alliance", value=(str(row["matchBrief_red_team1"]) + "\n" + str(row["matchBrief_red_team2"])), inline=False)
+                embedVar.add_field(name="Blue Alliance", value=(str(row["matchBrief_blue_team1"]) + "\n" + str(row["matchBrief_blue_team2"])), inline=False)
 
-            await ctx.send(embed=embedVar)
+                await ctx.send(embed=embedVar)
+    else:
+        logger.error("[chshigh] " + "FTC Event Server is not enabled!")
 
 #23JAN22
 @bot.command(name="autohigh", aliases=['ah', 'ahigh'])
@@ -783,7 +789,8 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_ready():
     # Check if we have a valid API key
-    checkFTCEVENTSERVER_APIKey()
+    if bool_FTCEVENTSSERVER:
+        checkFTCEVENTSERVER_APIKey()
         
     # Get the Channel IDs for the channels we need
     findChannels()
@@ -928,14 +935,15 @@ def findChannels():
             DiscordChannel(bot, bot.get_all_channels(), channel, 1)
     else:
         DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
-        
-    if "," in str(BOTMATCHRESULTCHANNELS):
-        f = StringIO(BOTMATCHRESULTCHANNELS)
-        channels = next(csv.reader(f, delimiter=','))
-        for channel in channels:
-            DiscordChannel(bot, bot.get_all_channels(), channel, 3)
-    else:
-        DiscordChannel(bot, bot.get_all_channels(), BOTMATCHRESULTCHANNELS, 3)
+
+    if bool_FTCEVENTSSERVER:
+        if "," in str(BOTMATCHRESULTCHANNELS):
+            f = StringIO(BOTMATCHRESULTCHANNELS)
+            channels = next(csv.reader(f, delimiter=','))
+            for channel in channels:
+                DiscordChannel(bot, bot.get_all_channels(), channel, 3)
+        else:
+            DiscordChannel(bot, bot.get_all_channels(), BOTMATCHRESULTCHANNELS, 3)
     
     for channel in DiscordChannel.AllDiscordChannels:
         logger.debug("[findChannels] " + channel.name)
@@ -965,12 +973,10 @@ async def stopBot():
     #Removing because default close() command handles this
     #f_task3 = asyncio.create_task(voiceStop())
     #loop.run_until_complete(f_task3)
-
-    f_task1 = asyncio.create_task(stopWebSockets())
-
-    f_task2 = asyncio.create_task(stopDiscordBot())
-
-    await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
+    if bool_FTCEVENTSSERVER:
+        f_task1 = asyncio.create_task(stopWebSockets())
+        f_task2 = asyncio.create_task(stopDiscordBot())
+        await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
 
     #Tell logger to orderly shutdown all logs
     logger.warning("[stopBot] Bot has shut down. Stopping logging!")

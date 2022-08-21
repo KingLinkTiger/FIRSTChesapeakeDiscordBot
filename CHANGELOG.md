@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.12] - 8AUG22
+### Added
+- bool_FTCEVENTSSERVER to disable all FTC Server components if desired.
+
 ## [2.3.11] - 30JAN22
 ### Added
 - Added Active Commentator Role Logic
