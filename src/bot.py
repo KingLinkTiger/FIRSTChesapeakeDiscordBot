@@ -50,10 +50,10 @@ formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
-if not os.path.exists("/var/log/firstchesapeakebot"):
-    os.makedirs("/var/log/firstchesapeakebot")
+if not os.path.exists("/LogFiles"):
+    os.makedirs("/LogFiles")
 
-fh = logging.FileHandler("/var/log/firstchesapeakebot/FIRSTChesapeakeBot.log")
+fh = logging.FileHandler("/LogFiles/FIRSTChesapeakeBot.log")
 fh.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')

@@ -2,7 +2,11 @@
 
 All notable changes to the project will be documented in this file.
 
-## [2.3.12] - 8AUG22
+## [2.3.13] - 23AUG22
+### Changed
+- Log location from /var/log to /LogFiles
+
+## [2.3.12] - 18AUG22
 ### Added
 - bool_FTCEVENTSSERVER to disable all FTC Server components if desired.
 
