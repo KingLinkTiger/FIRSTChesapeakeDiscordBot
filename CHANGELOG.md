@@ -2,6 +2,12 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.15] - 23AUG22
+### Changed
+- Changed bool_FTCEVENTSSERVER logic to be more bulletproof
+- Changed BOTTSENABLED logic to be more bulletproof
+- Changed ENV variables to strip quotes if they get added
+
 ## [2.3.14] - 23AUG22
 ### Changed
 - Fixed bool_FTCEVENTSSERVER logic

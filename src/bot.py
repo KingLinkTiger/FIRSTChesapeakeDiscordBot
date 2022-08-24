@@ -70,25 +70,25 @@ FTCEVENTS_KEY = os.getenv('FTCEVENTS_KEY')
 FRCEVENTS_KEY = os.getenv('FRCEVENTS_KEY')
 FTCEVENTSERVER = os.getenv('FTCEVENTSERVER')
 
-BOTADMINCHANNELS = os.getenv('BOTADMINCHANNELS')
+BOTADMINCHANNELS = os.getenv('BOTADMINCHANNELS').replace("'", "").replace('"', '')
 
-BOTPRODUCTIONCHANNELS = os.getenv('BOTPRODUCTIONCHANNELS')
+BOTPRODUCTIONCHANNELS = os.getenv('BOTPRODUCTIONCHANNELS').replace("'", "").replace('"', '')
 
-BOTMATCHRESULTCHANNELS = os.getenv('BOTMATCHRESULTCHANNELS')
+BOTMATCHRESULTCHANNELS = os.getenv('BOTMATCHRESULTCHANNELS').replace("'", "").replace('"', '')
 
 FTCEVENTSERVER_APIKey = os.getenv('FTCEVENTSERVER_APIKey')
 
-ROLE_NEWUSER = os.getenv('ROLE_NEWUSER')
+ROLE_NEWUSER = os.getenv('ROLE_NEWUSER').replace("'", "").replace('"', '')
 
-ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR')
+ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR').replace("'", "").replace('"', '')
 
 #TTS ENV Variables
 BOTTTSENABLED = os.getenv('BOTTTSENABLED')
-BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL')
+BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL').replace("'", "").replace('"', '')
 
 #Reaction Monitor ENV Variables
 ID_Message_ReactionMonitor = int(os.getenv('ID_Message_ReactionMonitor'))
-ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor')
+ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor').replace("'", "").replace('"', '')
 ID_Channel_ReactionMonitor = int(os.getenv('ID_Channel_ReactionMonitor'))
 
 #Required for mySQL Queries
@@ -148,7 +148,7 @@ async def endOfDay(ctx):
 #23JAN22
 @bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
 async def chshigh(ctx):
-    if bool_FTCEVENTSSERVER == "True":
+    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
 
         if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
@@ -385,7 +385,7 @@ async def vPing(ctx):
             
 #23JAN22 - Moved this to its own function so we can call it multiple times
 async def playVoice(ctx, msg, accent='com'):
-    if BOTTTSENABLED:
+    if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
 
         if not voice is None: #test if voice is None
@@ -593,7 +593,7 @@ async def addEvent(ctx, eventCode, eventName):
             
             #If this is the first event we are monitoring join voice
             if (not events):
-                if BOTTTSENABLED:
+                if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
                     await voiceJoin()
 
                 await bot.change_presence(activity=discord.Streaming(name="FIRST Chesapeake Event", url="https://www.twitch.tv/firstchesapeake"))
@@ -649,7 +649,7 @@ async def removeEvent(ctx, eventCode):
                 await ctx.message.add_reaction('🛑')
                 
                 #If this is the last event we were monitoring disconnect voice
-                if not events and BOTTTSENABLED:
+                if not events and BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
                     await voiceStop()
         else:
             eventFound = False
@@ -664,7 +664,7 @@ async def removeEvent(ctx, eventCode):
                     
                     #If this is the last event we were monitoring disconnect voice
                     if (not events): 
-                        if BOTTTSENABLED:
+                        if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
                             await voiceStop()
                         await bot.change_presence(status=None)
             if not eventFound:
@@ -789,7 +789,7 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_ready():
     # Check if we have a valid API key
-    if bool_FTCEVENTSSERVER == "True":
+    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         checkFTCEVENTSERVER_APIKey()
         
     # Get the Channel IDs for the channels we need
@@ -936,7 +936,7 @@ def findChannels():
     else:
         DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
 
-    if bool_FTCEVENTSSERVER == "True":
+    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         if "," in str(BOTMATCHRESULTCHANNELS):
             f = StringIO(BOTMATCHRESULTCHANNELS)
             channels = next(csv.reader(f, delimiter=','))
@@ -973,7 +973,7 @@ async def stopBot():
     #Removing because default close() command handles this
     #f_task3 = asyncio.create_task(voiceStop())
     #loop.run_until_complete(f_task3)
-    if bool_FTCEVENTSSERVER == "True":
+    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
         f_task1 = asyncio.create_task(stopWebSockets())
         f_task2 = asyncio.create_task(stopDiscordBot())
         await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
