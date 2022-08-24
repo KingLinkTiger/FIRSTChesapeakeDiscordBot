@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.14] - 23AUG22
+### Changed
+- Fixed bool_FTCEVENTSSERVER logic
+
 ## [2.3.13] - 23AUG22
 ### Changed
 - Log location from /var/log to /LogFiles

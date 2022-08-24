@@ -106,7 +106,7 @@ ROLE_COMMENTATOR = int(os.getenv('ROLE_COMMENTATOR'))
 ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_Channel_Voice_CommentatorLive'))
 
 # Get master variables to disable portions of the bot if desired
-bool_FTCEVENTSSERVER = bool(os.getenv('bool_FTCEVENTSSERVER'))
+bool_FTCEVENTSSERVER = os.getenv('bool_FTCEVENTSSERVER')
 
 
 intents = discord.Intents(
@@ -148,7 +148,7 @@ async def endOfDay(ctx):
 #23JAN22
 @bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
 async def chshigh(ctx):
-    if bool_FTCEVENTSSERVER:
+    if bool_FTCEVENTSSERVER == "True":
         logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
 
         if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
@@ -789,7 +789,7 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_ready():
     # Check if we have a valid API key
-    if bool_FTCEVENTSSERVER:
+    if bool_FTCEVENTSSERVER == "True":
         checkFTCEVENTSERVER_APIKey()
         
     # Get the Channel IDs for the channels we need
@@ -936,7 +936,7 @@ def findChannels():
     else:
         DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
 
-    if bool_FTCEVENTSSERVER:
+    if bool_FTCEVENTSSERVER == "True":
         if "," in str(BOTMATCHRESULTCHANNELS):
             f = StringIO(BOTMATCHRESULTCHANNELS)
             channels = next(csv.reader(f, delimiter=','))
@@ -973,7 +973,7 @@ async def stopBot():
     #Removing because default close() command handles this
     #f_task3 = asyncio.create_task(voiceStop())
     #loop.run_until_complete(f_task3)
-    if bool_FTCEVENTSSERVER:
+    if bool_FTCEVENTSSERVER == "True":
         f_task1 = asyncio.create_task(stopWebSockets())
         f_task2 = asyncio.create_task(stopDiscordBot())
         await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
