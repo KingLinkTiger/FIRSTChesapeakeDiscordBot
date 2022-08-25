@@ -2,6 +2,13 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.17] - 25AUG22
+### Added
+- message_content intents so commands actually work
+
+### Changed
+- Updated requirements.txt
+
 ## [2.3.16] - 25AUG22
 ### Changed
 - Moved bool_FTCEVENTSSERVER logic to when the variable is first set to limit reuse of code

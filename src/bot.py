@@ -117,6 +117,7 @@ bool_FTCEVENTSSERVER = os.getenv('bool_FTCEVENTSSERVER').lower() in ['true', '1'
 
 
 intents = discord.Intents(
+    message_content=True, #25AUG22 - Required with Discord.py v2
     messages=True,
     guilds=True,
     reactions=True,
