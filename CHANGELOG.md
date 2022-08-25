@@ -2,6 +2,10 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.16] - 25AUG22
+### Changed
+- Moved bool_FTCEVENTSSERVER logic to when the variable is first set to limit reuse of code
+
 ## [2.3.15] - 23AUG22
 ### Changed
 - Changed bool_FTCEVENTSSERVER logic to be more bulletproof

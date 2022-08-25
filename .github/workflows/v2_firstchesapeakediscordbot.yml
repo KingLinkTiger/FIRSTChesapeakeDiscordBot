@@ -10,26 +10,25 @@ on:
       - v2
   workflow_dispatch:
 
+name: Build and deploy Python app
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python version
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
       
       - name: Install dependencies
         run: |
-          python3 -m pip install -U "discord.py[voice]"
+          echo pwd
+          ls
+          python -m pip install --upgrade pip
+          pip install -U "discord.py[voice]"
           pip install -r requirements.txt
         
       - name: 'Deploy to Azure Web App'

@@ -35,14 +35,15 @@ import mysql.connector
 from mysql.connector import Error
 
 
-
+#25AUG22 - Get logging level from variable
+LOGLEVEL =  os.environ.get('LOGLEVEL', 'INFO').upper()
 
 #Create cache file so we don't make unnecessary calls to the APIs 
 requests_cache.install_cache('FIRSTChesapeakeBot_cache', backend='sqlite', expire_after=(datetime.timedelta(days=3)))
 
 #Start logging
 logger = logging.getLogger('FIRSTChesapeakeBot')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(level=LOGLEVEL) #25AUG22 - Updated to use LOGLEVEL variable
 
 #23JAN22 - Output to stdout
 sh = logging.StreamHandler(sys.stdout)
@@ -50,11 +51,17 @@ formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message
 sh.setFormatter(formatter)
 logger.addHandler(sh)
 
-if not os.path.exists("/LogFiles"):
-    os.makedirs("/LogFiles")
+#25AUG22 - Add LOGFOLDER Variable
+LOGFOLDER = os.path.join(os.environ.get('LOGFOLDER', '/var/log'), '') # https://stackoverflow.com/questions/2736144/python-add-trailing-slash-to-directory-string-os-independently
 
-fh = logging.FileHandler("/LogFiles/FIRSTChesapeakeBot.log")
-fh.setLevel(logging.DEBUG)
+#25AUG22 - Added LOGNAME Variable
+LOGNAME = os.environ.get('LOGNAME', 'FIRSTChesapeakeDiscordBot.log')
+
+if not os.path.exists(LOGFOLDER):
+    os.makedirs(LOGFOLDER)
+
+fh = logging.FileHandler(LOGFOLDER+LOGNAME)
+fh.setLevel(level=LOGLEVEL) #25AUG22 - Updated to use LOGLEVEL variable
 
 formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
 fh.setFormatter(formatter)
@@ -106,7 +113,7 @@ ROLE_COMMENTATOR = int(os.getenv('ROLE_COMMENTATOR'))
 ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_Channel_Voice_CommentatorLive'))
 
 # Get master variables to disable portions of the bot if desired
-bool_FTCEVENTSSERVER = os.getenv('bool_FTCEVENTSSERVER')
+bool_FTCEVENTSSERVER = os.getenv('bool_FTCEVENTSSERVER').lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
 
 
 intents = discord.Intents(
@@ -148,7 +155,7 @@ async def endOfDay(ctx):
 #23JAN22
 @bot.command(name="dhighscore", aliases=['dhs', 'dhigh', 'dh', 'chshigh'])
 async def chshigh(ctx):
-    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+    if bool_FTCEVENTSSERVER:
         logger.info("[chshigh] " + ctx.message.author.display_name + " tried to run command " + ctx.message.content)
 
         if ctx.message.channel.name in [x.name.lower() for x in DiscordChannel.AllDiscordChannels if x.channelType == 0 or x.channelType == 1]:
@@ -357,6 +364,12 @@ async def highscore(ctx):
 #KLT - 30NOV21 2058 - Added Ping Command
 @bot.command(name="ping")
 async def ping(ctx):
+    #25AUG22 - Added debug
+    logger.debug("[ping] " + ctx.message.author.display_name + " attempting to run command.")
+    logger.debug("[ping] ROLE_ADMINISTRATOR: " + ROLE_ADMINISTRATOR.lower())
+    for y in ctx.message.author.roles:
+        logger.debug("[ping] " + ctx.message.author.display_name + " role: " + y.name.lower())
+
     #30JAN22 - Removed channel restriction
     if ROLE_ADMINISTRATOR.lower() in [y.name.lower() for y in ctx.message.author.roles]:
         logger.info(ctx.message.author.display_name + " ran command " + ctx.message.content)
@@ -789,7 +802,7 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_ready():
     # Check if we have a valid API key
-    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+    if bool_FTCEVENTSSERVER:
         checkFTCEVENTSERVER_APIKey()
         
     # Get the Channel IDs for the channels we need
@@ -936,7 +949,7 @@ def findChannels():
     else:
         DiscordChannel(bot, bot.get_all_channels(), BOTADMINCHANNELS, 1)
 
-    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+    if bool_FTCEVENTSSERVER:
         if "," in str(BOTMATCHRESULTCHANNELS):
             f = StringIO(BOTMATCHRESULTCHANNELS)
             channels = next(csv.reader(f, delimiter=','))
@@ -973,7 +986,7 @@ async def stopBot():
     #Removing because default close() command handles this
     #f_task3 = asyncio.create_task(voiceStop())
     #loop.run_until_complete(f_task3)
-    if bool_FTCEVENTSSERVER.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+    if bool_FTCEVENTSSERVER:
         f_task1 = asyncio.create_task(stopWebSockets())
         f_task2 = asyncio.create_task(stopDiscordBot())
         await asyncio.wait({f_task1, f_task2}, return_when=asyncio.ALL_COMPLETED)
