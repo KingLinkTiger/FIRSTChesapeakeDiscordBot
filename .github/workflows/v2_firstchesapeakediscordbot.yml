@@ -10,7 +10,6 @@ on:
       - v2
   workflow_dispatch:
 
-name: Build and deploy Python app
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
