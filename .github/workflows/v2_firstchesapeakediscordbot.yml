@@ -26,13 +26,21 @@ jobs:
         run: |
           python -m venv --copies antenv
           source antenv/bin/activate
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -U "discord.py[voice]"
           pip install -r requirements.txt
-        
+          apt update
+          apt install ffmpeg -y
+
+#      - name: Upload artifact for deployment jobs
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: python-app
+#          path: .
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
@@ -40,3 +48,4 @@ jobs:
           app-name: 'FIRSTChesapeakeDiscordBot'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F8BB4884D40541BEA0DE11753A13CA6F }}
+          startup-command: python src/bot.py

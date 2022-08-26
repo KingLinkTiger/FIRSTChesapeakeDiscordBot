@@ -2,6 +2,14 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.18] - 25AUG22
+### Added
+- discord.py to requirements.txt
+
+### Changed
+- Changed LOGLEVEL, LOGFOLDER, and LOGNAME variables to chsLOGLEVEL, chsLOGFOLDER, and chsLOGNAME to avoid conflict
+
+
 ## [2.3.17] - 25AUG22
 ### Added
 - message_content intents so commands actually work
