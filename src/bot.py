@@ -90,7 +90,7 @@ ROLE_NEWUSER = os.getenv('ROLE_NEWUSER').replace("'", "").replace('"', '')
 ROLE_ADMINISTRATOR = os.getenv('ROLE_ADMINISTRATOR').replace("'", "").replace('"', '')
 
 #TTS ENV Variables
-BOTTTSENABLED = os.getenv('BOTTTSENABLED')
+BOTTTSENABLED = os.getenv('BOTTTSENABLED').lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
 BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL').replace("'", "").replace('"', '')
 
 #Reaction Monitor ENV Variables
@@ -399,7 +399,7 @@ async def vPing(ctx):
             
 #23JAN22 - Moved this to its own function so we can call it multiple times
 async def playVoice(ctx, msg, accent='com'):
-    if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+    if BOTTTSENABLED:
         voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
 
         if not voice is None: #test if voice is None
@@ -607,7 +607,7 @@ async def addEvent(ctx, eventCode, eventName):
             
             #If this is the first event we are monitoring join voice
             if (not events):
-                if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+                if BOTTTSENABLED:
                     await voiceJoin()
 
                 await bot.change_presence(activity=discord.Streaming(name="FIRST Chesapeake Event", url="https://www.twitch.tv/firstchesapeake"))
@@ -663,7 +663,7 @@ async def removeEvent(ctx, eventCode):
                 await ctx.message.add_reaction('🛑')
                 
                 #If this is the last event we were monitoring disconnect voice
-                if not events and BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+                if not events and BOTTTSENABLED:
                     await voiceStop()
         else:
             eventFound = False
@@ -678,7 +678,7 @@ async def removeEvent(ctx, eventCode):
                     
                     #If this is the last event we were monitoring disconnect voice
                     if (not events): 
-                        if BOTTTSENABLED.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']:
+                        if BOTTTSENABLED:
                             await voiceStop()
                         await bot.change_presence(status=None)
             if not eventFound:

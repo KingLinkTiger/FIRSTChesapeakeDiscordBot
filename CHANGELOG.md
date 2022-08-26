@@ -2,6 +2,12 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.20] - 26AUG22
+### Changed
+- BOTTTSENABLED logic to limit reuse
+- Workflow to push to Azure Container Instances
+- Updated Python base image to latest (3.9.13-slim-buster)
+
 ## [2.3.19] - 26AUG22
 ### Changed
 - From docker-image.yml to Azure Generated Workflow YML
