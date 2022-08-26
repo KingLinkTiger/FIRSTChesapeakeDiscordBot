@@ -48,4 +48,3 @@ jobs:
           app-name: 'FIRSTChesapeakeDiscordBot'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_F8BB4884D40541BEA0DE11753A13CA6F }}
-          startup-command: python src/bot.py
