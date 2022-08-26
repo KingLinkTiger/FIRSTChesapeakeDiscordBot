@@ -2,6 +2,16 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.19] - 26AUG22
+### Changed
+- From docker-image.yml to Azure Generated Workflow YML
+
+### Added
+- docker-image.yml to automate docker image creation
+
+### Removed
+- Azure Web App automation. Testing Docker automation.
+
 ## [2.3.18] - 25AUG22
 ### Added
 - discord.py to requirements.txt
