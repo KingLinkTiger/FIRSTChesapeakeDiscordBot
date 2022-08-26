@@ -116,7 +116,7 @@ jobs:
         uses: 'azure/aci-deploy@v1'
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
-          dns-name-label: ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }}
+          dns-name-label: ${{ steps.lowerREPO_NAME.outputs.lowercase }}${{ github.run_number }}
           image: ${{ env.REGISTRY }}/${{ steps.lowerGITHUB_REPOSITORY.outputs.lowercase }}:v2
           registry-login-server: ${{ env.REGISTRY }}
           registry-username: ${{ github.actor }}
