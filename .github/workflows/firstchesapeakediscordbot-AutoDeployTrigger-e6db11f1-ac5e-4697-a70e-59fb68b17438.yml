@@ -99,18 +99,20 @@ jobs:
         with:
           creds: ${{ secrets.FIRSTCHESAPEAKEDISCORDBOT_AZURE_CREDENTIALS }}
 
-      - name: Lowercase IMAGE_NAME
-        run: |
-          echo "L_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+      - name: lowerIMAGE_NAME
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ env.IMAGE_NAME }}
 
-      - name: Lowercase github.actor
-        run: |
-          echo "L_ACTOR=${github.actor,,}" >>${GITHUB_ENV}
+      - name: lowerACTOR
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ github.actor }}
 
       - name: Deploy to containerapp
         uses: azure/CLI@v1
         with:
           inlineScript: |
             az config set extension.use_dynamic_install=yes_without_prompt
-            az containerapp registry set -n  ${L_IMAGE_NAME} -g RG_CHS --server ghcr.io --username  ${L_ACTOR} --password ${{ secrets.GITHUB_TOKEN }}
-            az containerapp update -n ${L_IMAGE_NAME} -g RG_CHS --image ghcr.io/${L_ACTOR}/ ${L_IMAGE_NAME}:v2
+            az containerapp registry set -n ${{ steps.lowerIMAGE_NAME.outputs.lowercase }} -g RG_CHS --server ghcr.io --username  ${{ steps.lowerACTOR.outputs.lowercase }} --password ${{ secrets.GITHUB_TOKEN }}
+            az containerapp update -n ${{ steps.lowerIMAGE_NAME.outputs.lowercase }} -g RG_CHS --image ghcr.io/${{ steps.lowerACTOR.outputs.lowercase }}/${{ steps.lowerIMAGE_NAME.outputs.lowercase }}:v2
