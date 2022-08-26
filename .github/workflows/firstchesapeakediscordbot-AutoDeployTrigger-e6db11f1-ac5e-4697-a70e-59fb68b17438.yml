@@ -11,7 +11,13 @@ on:
     - '.github/workflows/firstchesapeakediscordbot-AutoDeployTrigger-e6db11f1-ac5e-4697-a70e-59fb68b17438.yml'
 
   # Allow mannually trigger 
-  workflow_dispatch:      
+  workflow_dispatch:
+    
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
