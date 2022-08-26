@@ -2,6 +2,13 @@
 
 All notable changes to the project will be documented in this file.
 
+## [2.3.21] - 26AUG22
+### Added
+- Additional debugging outputs to various functions
+
+### Changed
+- Workflow files to, well, work.
+
 ## [2.3.20] - 26AUG22
 ### Changed
 - BOTTTSENABLED logic to limit reuse

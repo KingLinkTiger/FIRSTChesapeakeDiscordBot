@@ -775,7 +775,6 @@ async def clear(ctx, amount: int):
 # ===== START BOT EVENT SECTION ===== 
 
 #30JAN22 - On Voice Channel Join
-#TODO
 @bot.event
 async def on_voice_state_update(member, before, after):
     logger.info("[on_voice_state_update] " + member.display_name + " has updated their voice status!")
@@ -793,6 +792,10 @@ async def on_voice_state_update(member, before, after):
                     #Assign the role
                     logger.info("[on_voice_state_update][ACTIVECOMMENTATOR] Adding " + member.display_name + " to Active Commentator Role!")
                     await member.add_roles(obj_ROLE_ACTIVECOMMENTATOR)
+                else:
+                    logger.debug("[on_voice_state_update][ACTIVECOMMENTATOR] " + member.display_name + " is already an ACTIVECOMMENTATOR.")
+            else:
+                logger.debug("[on_voice_state_update][COMMENTATOR] " + member.display_name + " is not an COMMENTATOR.")
 
 @bot.event
 async def on_command_error(ctx, error):
