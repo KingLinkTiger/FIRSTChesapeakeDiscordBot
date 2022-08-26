@@ -106,4 +106,4 @@ jobs:
           inlineScript: |
             az config set extension.use_dynamic_install=yes_without_prompt
             az containerapp registry set -n firstchesapeakediscordbot -g RG_CHS --server ghcr.io --username  ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }}
-            az containerapp update -n firstchesapeakediscordbot -g RG_CHS --image ghcr.io/${{ github.actor }}/firstchesapeakediscordbot:${{ github.sha }}
+            az containerapp update -n firstchesapeakediscordbot -g RG_CHS --image ghcr.io/${{ github.actor }}/firstchesapeakediscordbot:v2
