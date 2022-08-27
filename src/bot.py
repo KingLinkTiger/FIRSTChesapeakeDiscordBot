@@ -52,7 +52,7 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 #25AUG22 - Add LOGFOLDER Variable
-chsLOGFOLDER = os.path.join(os.environ.get('chsLOGFOLDER', '/var/log'), '') # https://stackoverflow.com/questions/2736144/python-add-trailing-slash-to-directory-string-os-independently
+chsLOGFOLDER = os.path.join(os.environ.get('CHSLOGFOLDER', '/var/log'), '') # https://stackoverflow.com/questions/2736144/python-add-trailing-slash-to-directory-string-os-independently
 
 #25AUG22 - Added LOGNAME Variable
 chsLOGNAME = os.environ.get('LOGNAME', 'FIRSTChesapeakeDiscordBot.log')
@@ -94,29 +94,29 @@ BOTTTSENABLED = os.getenv('BOTTTSENABLED').lower() in ['true', '1', 't', 'y', 'y
 BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL').replace("'", "").replace('"', '')
 
 #Reaction Monitor ENV Variables
-ID_Message_ReactionMonitor = int(os.getenv('ID_Message_ReactionMonitor'))
+ID_Message_ReactionMonitor = int(os.getenv('ID_MESSAGE_REACTIONMONITOR'))
 
-if os.environ.get('ROLE_ReactionMonitor') is not None: #27AUG22
-    ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor').replace("'", "").replace('"', '')
+if os.environ.get('ROLE_REACTIONMONITOR') is not None: #27AUG22
+    ROLE_ReactionMonitor = os.getenv('ROLE_REACTIONMONITOR').replace("'", "").replace('"', '')
 
-ID_Channel_ReactionMonitor = int(os.getenv('ID_Channel_ReactionMonitor'))
+ID_Channel_ReactionMonitor = int(os.getenv('ID_CHANNEL_REACTIONMONITOR'))
 
 #Required for mySQL Queries
-mySQL_USER = os.getenv('mySQL_USER')
-mySQL_PASSWORD = os.getenv('mySQL_PASSWORD')
-mySQL_HOST = os.getenv('mySQL_HOST')
-mySQL_DATABASE = os.getenv('mySQL_DATABASE')
-mySQL_TABLE = os.getenv('mySQL_TABLE')
-mySQL_RANKINGTABLE = os.getenv('mySQL_RANKINGTABLE')
+mySQL_USER = os.getenv('MYSQL_USER')
+mySQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
+mySQL_HOST = os.getenv('MYSQL_HOST')
+mySQL_DATABASE = os.getenv('MYSQL_DATABASE')
+mySQL_TABLE = os.getenv('MYSQL_TABLE')
+mySQL_RANKINGTABLE = os.getenv('MYSQL_RANKINGTABLE')
 
 # Commentator ROLE Management
 #from discord.ext import tasks #TODO Autoremove the role
 ROLE_ACTIVECOMMENTATOR = int(os.getenv('ROLE_ACTIVECOMMENTATOR'))
 ROLE_COMMENTATOR = int(os.getenv('ROLE_COMMENTATOR'))
-ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_Channel_Voice_CommentatorLive'))
+ID_Channel_Voice_CommentatorLive = int(os.getenv('ID_CHANNEL_VOICE_COMMENTATORLIVE'))
 
 # Get master variables to disable portions of the bot if desired
-bool_FTCEVENTSSERVER = os.getenv('bool_FTCEVENTSSERVER').lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
+bool_FTCEVENTSSERVER = os.getenv('BOOL_FTCEVENTSSERVER').lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'certainly', 'uh-huh']
 
 
 intents = discord.Intents(
