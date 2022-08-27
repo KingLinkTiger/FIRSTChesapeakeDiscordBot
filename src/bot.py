@@ -95,7 +95,10 @@ BOTTTSCHANNEL = os.getenv('BOTTTSCHANNEL').replace("'", "").replace('"', '')
 
 #Reaction Monitor ENV Variables
 ID_Message_ReactionMonitor = int(os.getenv('ID_Message_ReactionMonitor'))
-ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor').replace("'", "").replace('"', '')
+
+if os.environ.get('ROLE_ReactionMonitor') is not None: #27AUG22
+    ROLE_ReactionMonitor = os.getenv('ROLE_ReactionMonitor').replace("'", "").replace('"', '')
+
 ID_Channel_ReactionMonitor = int(os.getenv('ID_Channel_ReactionMonitor'))
 
 #Required for mySQL Queries
